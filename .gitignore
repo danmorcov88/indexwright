@@ -1,0 +1,20 @@
+# local working files
+development plan.md
+tasks/
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.coverage
+coverage.xml
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# editors
+.idea/
+.vscode/
