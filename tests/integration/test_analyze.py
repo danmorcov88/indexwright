@@ -10,6 +10,7 @@ from indexwright.cli import EXIT_FINDINGS, EXIT_OK, app
 from indexwright.mongo import Settings, connect
 from indexwright.rules.esr import format_keys
 from indexwright.shape import compact
+from indexwright.source import read_all
 from tests.integration.workload import EXPECTED_FINDINGS, EXPECTED_SHAPES
 
 if TYPE_CHECKING:
@@ -21,7 +22,8 @@ runner = CliRunner()
 def test_workload_findings_match_exactly(mongo: Mongo, workload: int) -> None:
     conn = connect(Settings(uri=mongo.ro_uri, db="app"))
     try:
-        result = analyze(conn, datetime.now(UTC) - timedelta(hours=1), 50_000, 200)
+        entries = read_all(conn, datetime.now(UTC) - timedelta(hours=1), 50_000)
+        result = analyze(conn, entries, 200)
     finally:
         conn.close()
     assert result.failed_checks == []

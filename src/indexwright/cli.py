@@ -20,11 +20,12 @@ from indexwright.indexes import inventory
 from indexwright.mongo import ConnectError, Settings, WriteAccessError, connect, mask_uri
 from indexwright.rules.esr import format_keys
 from indexwright.shape import compact
-from indexwright.source import read_all
+from indexwright.source import LogFormatError, read_all, read_log
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
 
+    from indexwright.analysis import Analysis
     from indexwright.doctor import Check
     from indexwright.model import CollectionIndexes, Entry, Finding, Shape, ShapeStats
     from indexwright.mongo import Connection
@@ -76,6 +77,11 @@ def main(
 
 
 Uri = Annotated[str, typer.Option("--uri", envvar="MONGODB_URI", show_default=False)]
+OptionalUri = Annotated[str | None, typer.Option("--uri", envvar="MONGODB_URI", show_default=False)]
+Log = Annotated[
+    list[str] | None,
+    typer.Option("--log", help="Read mongod JSON log files instead of the profiler (.gz ok)"),
+]
 Db = Annotated[str | None, typer.Option("--db", help="Limit to one database")]
 Since = Annotated[
     str, typer.Option("--since", help="Only profile entries newer than: 30m, 24h, 7d")
@@ -92,7 +98,7 @@ def doctor(ctx: typer.Context, uri: Uri, db: Db = None) -> None:
     """Check connectivity, version, privileges, profiler and $indexStats."""
     settings = Settings(uri=uri, timeout=ctx.obj, db=db)
     started = time.monotonic()
-    checks = _with_connection(settings, run_checks)
+    checks = _with_connection(settings, lambda conn: run_checks(_required(conn)))
     stdout.print(_checks_table(checks))
     failed = sum(c.status == "fail" for c in checks)
     warned = sum(c.status == "warn" for c in checks)
@@ -105,16 +111,23 @@ def doctor(ctx: typer.Context, uri: Uri, db: Db = None) -> None:
 
 @app.command()
 def shapes(
-    ctx: typer.Context, uri: Uri, db: Db = None, since: Since = "24h", limit: Limit = 50_000
+    ctx: typer.Context,
+    uri: OptionalUri = None,
+    log: Log = None,
+    db: Db = None,
+    since: Since = "24h",
+    limit: Limit = 50_000,
 ) -> None:
-    """List query shapes from the profiler with counts and latencies. No rules."""
-    settings = Settings(uri=uri, timeout=ctx.obj, db=db)
+    """List query shapes from the profiler or a log file with counts and latencies. No rules."""
+    settings = _settings(ctx, uri, db, log)
     cutoff = datetime.now(UTC) - _parse_since(since)
     started = time.monotonic()
     entries: _Counted[Entry] = _Counted()
-    stats = _with_connection(
-        settings, lambda conn: group(entries.wrap(read_all(conn, cutoff, limit)))
-    )
+
+    def collect(conn: Connection | None) -> list[ShapeStats]:
+        return group(entries.wrap(_entries(conn, log, cutoff, limit, db)))
+
+    stats = _with_connection(settings, collect)
     stdout.print(_shapes_table(stats))
     stderr.print(
         f"shapes: {entries.n} entries read, {len(stats)} shapes, {time.monotonic() - started:.1f}s"
@@ -131,6 +144,29 @@ class _Counted(Generic[T]):
             yield item
 
 
+def _settings(
+    ctx: typer.Context, uri: str | None, db: str | None, log: list[str] | None
+) -> Settings | None:
+    if uri:
+        return Settings(uri=uri, timeout=ctx.obj, db=db)
+    if log:
+        return None
+    raise typer.BadParameter("give --uri (or MONGODB_URI), --log, or both")
+
+
+def _required(conn: Connection | None) -> Connection:
+    assert conn is not None
+    return conn
+
+
+def _entries(
+    conn: Connection | None, log: list[str] | None, cutoff: datetime, limit: int, db: str | None
+) -> Iterable[Entry]:
+    if log:
+        return read_log(log, cutoff, limit, db)
+    return read_all(_required(conn), cutoff, limit)
+
+
 def _parse_since(text: str) -> timedelta:
     match = re.fullmatch(r"(\d+)([mhd])", text.strip())
     if not match:
@@ -142,7 +178,8 @@ def _parse_since(text: str) -> timedelta:
 @app.command()
 def analyze(
     ctx: typer.Context,
-    uri: Uri,
+    uri: OptionalUri = None,
+    log: Log = None,
     db: Db = None,
     since: Since = "24h",
     limit: Limit = 50_000,
@@ -150,12 +187,17 @@ def analyze(
     unused_days: UnusedDays = 30,
 ) -> None:
     """Find slow query shapes and recommend indexes. Exit 1 when high findings exist."""
-    settings = Settings(uri=uri, timeout=ctx.obj, db=db)
+    settings = _settings(ctx, uri, db, log)
     cutoff = datetime.now(UTC) - _parse_since(since)
     started = time.monotonic()
-    result = _with_connection(
-        settings, lambda conn: run_analysis(conn, cutoff, limit, max_explains, unused_days)
-    )
+
+    def run(conn: Connection | None) -> Analysis:
+        entries = _entries(conn, log, cutoff, limit, db)
+        return run_analysis(conn, entries, max_explains, unused_days)
+
+    result = _with_connection(settings, run)
+    if result.offline:
+        stderr.print("offline: no explain, existing indexes unknown, index rules skipped")
     if result.failed_checks:
         stdout.print(_checks_table(result.checks))
         stderr.print("analyze: doctor checks failed, fix them first")
@@ -201,7 +243,7 @@ def indexes(ctx: typer.Context, uri: Uri, db: Db = None, unused_days: UnusedDays
     """Index inventory with usage from every replica set member. No rules."""
     settings = Settings(uri=uri, timeout=ctx.obj, db=db)
     started = time.monotonic()
-    result = _with_connection(settings, lambda conn: inventory(conn, unused_days))
+    result = _with_connection(settings, lambda conn: inventory(_required(conn), unused_days))
     stdout.print(_indexes_table(result.collections))
     total = sum(len(c.indexes) for c in result.collections)
     report = result.report
@@ -279,21 +321,24 @@ def _shapes_table(stats: list[ShapeStats]) -> Table:
     return table
 
 
-def _with_connection(settings: Settings, fn: Callable[[Connection], T]) -> T:
-    try:
-        conn = connect(settings)
-    except ConnectError as exc:
-        _fail(str(exc), EXIT_USAGE)
-    except WriteAccessError as exc:
-        _fail(f"refusing to continue, {exc}", EXIT_WRITE_ACCESS)
+def _with_connection(settings: Settings | None, fn: Callable[[Connection | None], T]) -> T:
+    conn = None
+    if settings is not None:
+        try:
+            conn = connect(settings)
+        except ConnectError as exc:
+            _fail(str(exc), EXIT_USAGE)
+        except WriteAccessError as exc:
+            _fail(f"refusing to continue, {exc}", EXIT_WRITE_ACCESS)
     try:
         return fn(conn)
-    except PyMongoError as exc:
+    except (PyMongoError, LogFormatError, OSError) as exc:
         _fail(f"{type(exc).__name__}: {exc}", EXIT_USAGE)
     except KeyboardInterrupt:
         _fail("interrupted", EXIT_INTERRUPTED)
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def _fail(message: str, code: int) -> NoReturn:

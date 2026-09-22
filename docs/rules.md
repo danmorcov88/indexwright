@@ -68,6 +68,46 @@ equality field, or a `$regex` is not anchored, so a large part of the index is w
 **Recommends:** the ESR index. When the ideal index already exists, the finding says so and the
 cause is in the message (for example an unanchored regex).
 
+## unanchored_regex
+
+**Detects:** a `$regex` whose pattern does not start with `^`, on a field that has an index,
+and no collection scan (`collscan` owns that case).
+
+**Why it matters:** only an anchored pattern gives the planner index bounds. Anything else walks
+every key of the index.
+
+**Recommends:** anchor the pattern, or use a text index for free-text search.
+
+## negation_predicate
+
+**Detects:** a filter made only of negations: `$ne`, `$nin`, `$not`, `$exists: false`. It
+owns the shape; `collscan` and the ratio rules stay quiet (`sort_in_memory` does not, an index on
+the sort keys still helps).
+
+**Why it matters:** an index can find what equals a value, not what does not. A negation
+matches almost everything and cannot be narrowed.
+
+**Recommends:** add a positive predicate, or model the state so the common case is an equality.
+
+## large_in
+
+**Detects:** `$in` with more than 200 values. This finding is added next to any other finding
+on the shape, because the fix is different.
+
+**Why it matters:** each value is one index bound; a huge list means a huge plan and a slow
+first execution.
+
+**Recommends:** batch the list, or store the relationship on the other side.
+
+## lookup_no_index
+
+**Detects:** a `$lookup` whose `foreignField` has no index on the foreign collection (`_id`
+always has one). Pipeline-form lookups are skipped, their join key is not visible.
+
+**Why it matters:** the foreign collection is scanned once per input document.
+
+**Recommends:** `createIndex` on the foreign field of the foreign collection.
+
 ## Index hygiene rules
 
 These run per collection over `listIndexes` and the merged `$indexStats` usage, not per query

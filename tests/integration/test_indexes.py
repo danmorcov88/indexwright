@@ -9,6 +9,7 @@ from indexwright.analysis import analyze
 from indexwright.cli import EXIT_OK, app
 from indexwright.indexes import inventory
 from indexwright.mongo import Settings, connect
+from indexwright.source import read_all
 from tests.integration.workload import EXPECTED_INDEX_FINDINGS
 
 if TYPE_CHECKING:
@@ -20,7 +21,8 @@ runner = CliRunner()
 def test_index_findings_match_exactly(mongo: Mongo, workload: int) -> None:
     conn = connect(Settings(uri=mongo.ro_uri, db="app"))
     try:
-        result = analyze(conn, datetime.now(UTC) - timedelta(hours=1), 50_000, 200, unused_days=0)
+        entries = read_all(conn, datetime.now(UTC) - timedelta(hours=1), 50_000)
+        result = analyze(conn, entries, 200, unused_days=0)
     finally:
         conn.close()
     index_findings = [f for f in result.findings if not f.shape_id]

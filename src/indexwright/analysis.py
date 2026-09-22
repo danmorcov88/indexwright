@@ -8,11 +8,10 @@ from indexwright.doctor import run_checks
 from indexwright.explain import Explainer
 from indexwright.indexes import IndexCatalog, inventory
 from indexwright.rules import run_index_rules, run_rules, sort_findings
-from indexwright.source import read_all
+from indexwright.rules.base import NoIndexes
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-    from datetime import datetime
 
     from indexwright.doctor import Check
     from indexwright.model import Entry, Finding, Recommendation, ShapeStats
@@ -29,6 +28,7 @@ class Analysis:
     members_total: int = 1
     members_reached: int = 1
     unreachable: list[str] = field(default_factory=list)
+    offline: bool = False
 
     @property
     def failed_checks(self) -> list[Check]:
@@ -57,27 +57,28 @@ class Analysis:
 
 
 def analyze(
-    conn: Connection, since: datetime, limit: int, max_explains: int, unused_days: int = 30
+    conn: Connection | None, entries: Iterable[Entry], max_explains: int, unused_days: int = 30
 ) -> Analysis:
-    analysis = Analysis(checks=run_checks(conn))
+    analysis = Analysis(checks=run_checks(conn) if conn else [], offline=conn is None)
     if analysis.failed_checks:
         return analysis
-    entries = read_all(conn, since, limit)
-    counted = _count(entries, analysis)
-    analysis.shapes = group(counted)
-    explainer = Explainer(conn, max_total=max_explains)
-    catalog = IndexCatalog(conn)
+    analysis.shapes = group(_count(entries, analysis))
     findings: list[Finding] = []
-    for stats in analysis.shapes:
-        explain = explainer.explain(stats)
-        findings.extend(run_rules(stats, explain, catalog))
-    analysis.explains = explainer.executed
-    indexes = inventory(conn, unused_days)
-    for coll in indexes.collections:
-        findings.extend(run_index_rules(coll))
-    analysis.members_total = indexes.report.members_total
-    analysis.members_reached = indexes.report.members_reached
-    analysis.unreachable = indexes.report.unreachable
+    if conn is None:
+        for stats in analysis.shapes:
+            findings.extend(run_rules(stats, None, NoIndexes()))
+    else:
+        explainer = Explainer(conn, max_total=max_explains)
+        catalog = IndexCatalog(conn)
+        for stats in analysis.shapes:
+            findings.extend(run_rules(stats, explainer.explain(stats), catalog))
+        analysis.explains = explainer.executed
+        indexes = inventory(conn, unused_days)
+        for coll in indexes.collections:
+            findings.extend(run_index_rules(coll))
+        analysis.members_total = indexes.report.members_total
+        analysis.members_reached = indexes.report.members_reached
+        analysis.unreachable = indexes.report.unreachable
     weight = {s.shape.fingerprint: s.total_ms for s in analysis.shapes}
     analysis.findings = sort_findings(findings, weight)
     return analysis

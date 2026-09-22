@@ -7,7 +7,6 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 Op = str
-OPS = frozenset({"find", "count", "distinct", "update", "delete", "findAndModify", "aggregate"})
 
 Severity = Literal["critical", "high", "medium", "low", "info"]
 SEVERITY_ORDER: dict[str, int] = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}

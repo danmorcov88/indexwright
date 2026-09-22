@@ -32,6 +32,7 @@ indexwright doctor                       # connectivity, version, privileges, pr
 indexwright shapes  --db app --since 24h # query shapes with count, p50, p99, docs examined per returned
 indexwright analyze --db app --since 24h # findings, createIndex and dropIndex statements
 indexwright indexes --db app             # index inventory with usage from every replica set member
+indexwright analyze --log /var/log/mongodb/mongod.log --db app   # from the mongod log, offline
 ```
 
 Exit codes: `0` ok, `1` a check failed or a high/critical finding exists, `2` cannot connect,

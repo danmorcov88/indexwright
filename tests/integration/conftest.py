@@ -25,6 +25,7 @@ class Mongo:
     host: str
     port: int
     root: MongoClient[dict[str, Any]]
+    container: MongoDbContainer
 
     def uri(self, user: str, password: str) -> str:
         return f"mongodb://{user}:{password}@{self.host}:{self.port}/{APP_DB}?authSource=admin"
@@ -58,7 +59,12 @@ def mongo() -> Iterator[Mongo]:
         root.admin.command(
             "createUser", RW_USER, pwd=RW_PASSWORD, roles=[{"role": "readWrite", "db": APP_DB}]
         )
-        yield Mongo(container.get_container_host_ip(), int(container.get_exposed_port(27017)), root)
+        yield Mongo(
+            container.get_container_host_ip(),
+            int(container.get_exposed_port(27017)),
+            root,
+            container,
+        )
         root.close()
 
 
@@ -72,7 +78,8 @@ def workload(mongo: Mongo) -> int:
     db.command("profile", 0)
     db.system.profile.drop()
     db.create_collection("system.profile", capped=True, size=64 * 1024 * 1024)
-    db.command("profile", 2)
+    # slowms -1 also writes every operation to the mongod log, for the log-source tests.
+    db.command("profile", 2, slowms=-1)
     ops = wl.run(mongo.root)
     db.command("profile", 1, slowms=0)
     return ops

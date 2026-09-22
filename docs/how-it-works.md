@@ -9,6 +9,12 @@ system.profile ──▶ source ──▶ shape ──▶ aggregate ──▶ ru
 `indexwright` reads the database profiler (`<db>.system.profile`). Enable it with
 `db.setProfilingLevel(1, {slowms: 100})` to record only slow operations, or level 2 to record everything.
 
+It can also read the `mongod` log (`--log`, repeatable, `.gz` and `*` patterns accepted): every
+`"msg":"Slow query"` line carries the same fields as a profiler entry. Logs from MongoDB 4.4 and
+newer are JSON; older text logs are refused. With `--log` alone the tool works offline: rules
+use the `planSummary` and `hasSortStage` the server wrote, no `explain` runs, existing indexes
+are unknown, and the index hygiene rules are skipped. Add `--uri` to get all of it back.
+
 The reader walks the collection in reverse natural order (newest first) with a cursor,
 stops at `--limit` entries per database and ignores entries older than `--since`.
 
