@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from indexwright.model import Finding, Recommendation
-from indexwright.rules.base import is_collscan, severity
+from indexwright.rules.base import severity
 
 if TYPE_CHECKING:
     from indexwright.model import ExplainResult, ShapeStats
@@ -31,23 +31,18 @@ def _is_negation(value: Any) -> bool:
 def unanchored_regex(
     stats: ShapeStats, explain: ExplainResult | None, catalog: Indexes
 ) -> list[Finding]:
-    fields = stats.meta.unanchored_regex
-    if not fields or is_collscan(stats, explain):
+    fields = sorted(stats.meta.unanchored_regex)
+    if not fields:
         return []
     shape = stats.shape
-    indexed = {
-        index.keys[0][0]
-        for index in catalog.for_ns(shape.ns)
-        if index.keys and not index.partial and not index.hidden
-    }
-    hit = sorted(fields & indexed)
-    if not hit:
-        return []
-    names = ", ".join(hit)
-    message = f"$regex on {names} is not anchored with ^, so every key of the index is scanned"
+    names = ", ".join(fields)
+    message = (
+        f"$regex on {names} is not anchored with ^, no index can narrow it: every key or "
+        "every document is scanned"
+    )
     advice = f"anchor the pattern on {names} with ^, or use a text index for free-text search"
     recommendation = Recommendation("rewrite", shape.ns, advice)
-    evidence = {"fields": hit, "keys_per_returned": round(stats.keys_per_returned, 1)}
+    evidence = {"fields": fields, "docs_per_returned": round(stats.docs_per_returned, 1)}
     return [
         Finding(
             severity(stats),

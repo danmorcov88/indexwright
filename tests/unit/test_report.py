@@ -114,7 +114,7 @@ def test_json_report_structure_and_privacy() -> None:
         "entries_read": 150,
         "shapes": 3,
         "explains": 3,
-        "findings": 6,
+        "findings": 7,
         "offline": False,
         "members": {"total": 3, "reached": 2, "unreachable": ["c:27017"]},
     }
@@ -129,31 +129,33 @@ def test_json_report_structure_and_privacy() -> None:
     rules = [f["rule"] for f in doc["findings"]]
     assert rules == [
         "collscan",
+        "unanchored_regex",
         "negation_predicate",
         "collscan",
         "large_in",
         "unused_index",
         "collscan",
     ]
-    rec = doc["findings"][0]["recommendation"]
-    assert rec["kind"] == "create_index" and rec["keys"] == [["email", 1]]
+    assert doc["findings"][0]["recommendation"] is None
     assert doc["findings"][1]["recommendation"]["kind"] == "rewrite"
-    assert doc["findings"][4]["recommendation"]["keys"] == []
-    assert doc["findings"][3]["evidence"] == {"in_size": 300}
+    assert doc["findings"][6]["recommendation"]["keys"] == [["email", 1]]
+    assert doc["findings"][5]["recommendation"]["keys"] == []
+    assert doc["findings"][4]["evidence"] == {"in_size": 300}
 
 
 def test_json_report_deduplicates_recommendations() -> None:
     doc = json.loads(render_json(_analysis(), SOURCE, NOW))
     creates = doc["recommendations"]["create_index"]
     assert [c["statement"].split(", {name")[0] for c in creates] == [
-        "db.orders.createIndex({email: 1}",
         "db.orders.createIndex({customer_id: 1}",
+        "db.orders.createIndex({email: 1}",
     ]
-    assert len(creates[0]["shape_ids"]) == 2 and len(creates[1]["shape_ids"]) == 1
+    assert len(creates[0]["shape_ids"]) == 1 and len(creates[1]["shape_ids"]) == 1
     assert doc["recommendations"]["drop_index"] == [
         {"statement": 'db.orders.dropIndex("tags_1")', "ns": "app.orders"}
     ]
     assert [r["shape_ids"] for r in doc["recommendations"]["rewrite"]] == [
+        [doc["shapes"][0]["fingerprint"]],
         [doc["shapes"][1]["fingerprint"]],
         [doc["shapes"][2]["fingerprint"]],
     ]
@@ -168,7 +170,7 @@ def test_markdown_snapshot() -> None:
 
 def test_markdown_caps_rows() -> None:
     analysis = _analysis()
-    finding = analysis.findings[0]
+    finding = analysis.findings[6]
     analysis.findings = [finding] * 45
     text = render_markdown(analysis, SOURCE, NOW)
     assert text.count("| medium | collscan |") == 30
@@ -191,3 +193,17 @@ def test_table_renders_every_section() -> None:
     assert "findings" in text and "collscan" in text
     assert "Recommended indexes" in text and "Indexes to drop" in text and "Query rewrites" in text
     assert SECRET not in text
+
+
+def test_create_recommendations_collapse_prefixes() -> None:
+    analysis = _analysis()
+    wide = recommendation("app.orders", (("email", 1), ("created", 1)))
+    analysis.findings.append(
+        Finding("medium", "low_selectivity_index", "app.orders", "abc", "m", wide, {})
+    )
+    statements = analysis.create_index_statements()
+    keys = [tuple(r.keys) for r, _ in statements]
+    assert keys == [(("customer_id", 1),), (("email", 1), ("created", 1))]
+    ids = dict((tuple(r.keys), ids) for r, ids in statements)
+    assert "abc" in ids[(("email", 1), ("created", 1))]
+    assert len(ids[(("email", 1), ("created", 1))]) == 2

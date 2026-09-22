@@ -197,7 +197,8 @@ def shape_label(finding: Finding, shapes: dict[str, Shape]) -> str:
     shape = shapes.get(finding.shape_id)
     if shape is not None:
         return _label(shape)
-    return f"index {finding.evidence.get('index', '')}".strip()
+    index = finding.evidence.get("index")
+    return f"index {index}" if index else "collection"
 
 
 def _label(shape: Shape | None) -> str:

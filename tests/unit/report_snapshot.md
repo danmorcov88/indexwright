@@ -2,7 +2,7 @@
 
 Generated 2026-09-22 10:00 UTC by indexwright 0.1.0, from the profiler since 2026-09-21 10:00 UTC.
 
-150 entries, 3 shapes, 6 findings.
+150 entries, 3 shapes, 7 findings.
 
 ## Doctor
 
@@ -12,7 +12,8 @@ Generated 2026-09-22 10:00 UTC by indexwright 0.1.0, from the profiler since 202
 
 | severity | rule | ns | shape | message |
 |---|---|---|---|---|
-| medium | collscan | app.orders | find {email:{$regex:?}} | collection scan, 5000 documents examined per execution, 500 per document returned |
+| medium | collscan | app.orders | find {email:{$regex:?}} | collection scan, 5000 documents examined per execution, 500 per document returned; no indexable predicate to build an index from |
+| medium | unanchored_regex | app.orders | find {email:{$regex:?}} | $regex on email is not anchored with ^, no index can narrow it: every key or every document is scanned |
 | medium | negation_predicate | app.orders | find {status:{$ne:?}} | the filter on status only excludes values, an index cannot narrow a negation |
 | medium | collscan | app.orders | find {customer_id:{$in:[?]}} | collection scan, 5000 documents examined per execution, 500 per document returned |
 | medium | large_in | app.orders | find {customer_id:{$in:[?]}} | $in with up to 300 values, one index bound per value |
@@ -22,8 +23,8 @@ Generated 2026-09-22 10:00 UTC by indexwright 0.1.0, from the profiler since 202
 ## Recommended indexes
 
 ```js
-db.orders.createIndex({email: 1}, {name: "orders_esr_d67a46"})
 db.orders.createIndex({customer_id: 1}, {name: "orders_esr_386569"})
+db.orders.createIndex({email: 1}, {name: "orders_esr_d67a46"})
 ```
 
 ## Indexes to drop
@@ -36,5 +37,6 @@ db.orders.dropIndex("tags_1")
 
 ## Query rewrites
 
+- app.orders `find {email:{$regex:?}}`: anchor the pattern on email with ^, or use a text index for free-text search
 - app.orders `find {status:{$ne:?}}`: add a positive predicate (equality or range), or model the state so the common case is an equality
 - app.orders `find {customer_id:{$in:[?]}}`: split the list into batches, or store the relationship on the other side

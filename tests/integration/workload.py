@@ -45,30 +45,30 @@ EXPECTED_SHAPES: set[tuple[str, str]] = {
     ),
 }
 
-# (op, compact shape) -> (rule, recommended index keys or "rewrite"). Other shapes are clean.
-EXPECTED_FINDINGS: dict[tuple[str, str], tuple[str, str]] = {
-    ("find", "{status:{$ne:?}}"): ("negation_predicate", "rewrite"),
-    ("find", "{customer_id:{$in:[?]}}"): ("large_in", "rewrite"),
+# (op, compact shape) -> {(rule, recommended index keys | "rewrite" | "none")}. Other shapes
+# must be clean.
+EXPECTED_FINDINGS: dict[tuple[str, str], set[tuple[str, str]]] = {
+    ("find", "{status:{$ne:?}}"): {("negation_predicate", "rewrite")},
+    ("find", "{customer_id:{$in:[?]}}"): {("large_in", "rewrite")},
     (
         "aggregate",
         "[{$match:{customer_id:?}}, "
         "{$lookup:{foreignField:email, from:customers, localField:email}}]",
-    ): ("lookup_no_index", "{email: 1}"),
-    ("find", "{email:{$regex:?}}"): ("collscan", "{email: 1}"),
-    ("find", "{$or:[{status:?}, {total:{$gt:?}}]}"): ("collscan", "{total: 1}"),
-    ("find", "{status:?} sort {total:-1}"): ("sort_in_memory", "{status: 1, total: -1}"),
-    ("findAndModify", "{status:?} sort {total:1}"): ("sort_in_memory", "{status: 1, total: 1}"),
+    ): {("lookup_no_index", "{email: 1}")},
+    ("find", "{email:{$regex:?}}"): {("collscan", "none"), ("unanchored_regex", "rewrite")},
+    ("find", "{$or:[{status:?}, {total:{$gt:?}}]}"): {("collscan", "{total: 1}")},
+    ("find", "{status:?} sort {total:-1}"): {("sort_in_memory", "{status: 1, total: -1}")},
+    ("findAndModify", "{status:?} sort {total:1}"): {("sort_in_memory", "{status: 1, total: 1}")},
     (
         "aggregate",
         "[{$match:{status:?}}, {$sort:{total:-1}}, {$group:{_id:$customer_id}}]",
-    ): ("sort_in_memory", "{status: 1, total: -1}"),
-    ("find", "{status:?, total:{$gt:?}}"): ("docs_examined_ratio", "{status: 1, total: 1}"),
-    ("update", "{status:?, total:{$lt:?}}"): ("docs_examined_ratio", "{status: 1, total: 1}"),
-    ("delete", "{status:?, total:{$lt:?}}"): ("docs_examined_ratio", "{status: 1, total: 1}"),
-    ("find", "{created:{$gte:?, $lt:?}, email:?}"): (
-        "low_selectivity_index",
-        "{email: 1, created: 1}",
-    ),
+    ): {("sort_in_memory", "rewrite")},
+    ("find", "{status:?, total:{$gt:?}}"): {("docs_examined_ratio", "{status: 1, total: 1}")},
+    ("update", "{status:?, total:{$lt:?}}"): {("docs_examined_ratio", "{status: 1, total: 1}")},
+    ("delete", "{status:?, total:{$lt:?}}"): {("docs_examined_ratio", "{status: 1, total: 1}")},
+    ("find", "{created:{$gte:?, $lt:?}, email:?}"): {
+        ("low_selectivity_index", "{email: 1, created: 1}")
+    },
 }
 
 # Index name -> rule, with --unused-days 0. Everything else, _id_ first, must stay clean.

@@ -39,7 +39,16 @@ class Analysis:
         return any(f.severity in ("critical", "high") for f in self.findings)
 
     def create_index_statements(self) -> list[tuple[Recommendation, list[str]]]:
-        return self._grouped("create_index")
+        grouped = self._grouped("create_index")
+        kept: list[tuple[Recommendation, list[str]]] = []
+        for rec, ids in grouped:
+            wider = next((w for w, _ in grouped if w is not rec and _is_prefix(rec, w)), None)
+            if wider is None:
+                kept.append((rec, ids))
+                continue
+            target = next(entry for entry in grouped if entry[0] is wider)
+            target[1].extend(i for i in ids if i not in target[1])
+        return [(rec, ids) for rec, ids in grouped if any(k is rec for k, _ in kept)]
 
     def drop_index_statements(self) -> list[Recommendation]:
         return [rec for rec, _ in self._grouped("drop_index")]
@@ -56,6 +65,15 @@ class Analysis:
             key = (rec.ns, rec.statement)
             grouped.setdefault(key, (rec, []))[1].append(finding.shape_id)
         return list(grouped.values())
+
+
+def _is_prefix(short: Recommendation, long: Recommendation) -> bool:
+    if short.ns != long.ns or len(long.keys) <= len(short.keys):
+        return False
+    prefix = long.keys[: len(short.keys)]
+    if prefix == short.keys:
+        return True
+    return len(short.keys) == 1 and prefix[0][0] == short.keys[0][0]
 
 
 def analyze(

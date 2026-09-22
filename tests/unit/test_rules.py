@@ -91,7 +91,7 @@ def test_severity(count: int, p99: int, expected: str) -> None:
 
 
 def test_collscan_recommends_esr_index() -> None:
-    stats = _stats({"email": {"$regex": "x"}}, docs=5000, returned=10)
+    stats = _stats({"email": {"$regex": "^x"}}, docs=5000, returned=10)
     findings = run_rules(stats, COLLSCAN, Catalog(STATUS_1))
     assert [f.rule for f in findings] == ["collscan"]
     finding = findings[0]
@@ -272,14 +272,35 @@ def test_unanchored_regex_on_an_indexed_field() -> None:
     assert finding.evidence["fields"] == ["email"]
 
 
-def test_unanchored_regex_on_an_unindexed_field_is_a_collscan() -> None:
+def test_unanchored_regex_on_an_unindexed_field_gets_no_index_advice() -> None:
     stats = _stats({"email": {"$regex": "user1"}}, docs=5000, returned=16)
     findings = run_rules(stats, COLLSCAN, Catalog(STATUS_1))
-    assert [f.rule for f in findings] == ["collscan"]
-    partial = IndexInfo("app.orders", "email_p", (("email", 1),), partial=True)
-    plan = ExplainResult(("FETCH", "IXSCAN"), ("created_1_email_1",))
-    fine = _stats({"email": {"$regex": "x"}}, returned=1000)
-    assert run_rules(fine, plan, Catalog(partial)) == []
+    assert [f.rule for f in findings] == ["collscan", "unanchored_regex"]
+    assert findings[0].recommendation is None
+    assert "no indexable predicate" in findings[0].message
+    with_equality = _stats({"status": "new", "email": {"$regex": "user1"}}, docs=5000, returned=16)
+    findings = run_rules(with_equality, COLLSCAN, Catalog())
+    assert findings[0].recommendation is not None
+    assert findings[0].recommendation.keys == (("status", 1),)
+
+
+def test_sort_feeding_a_group_is_a_rewrite() -> None:
+    command = {
+        "aggregate": "orders",
+        "pipeline": [
+            {"$match": {"status": "new"}},
+            {"$sort": {"total": -1}},
+            {"$group": {"_id": "$customer_id"}},
+        ],
+    }
+    shape, meta = normalize("app.orders", "aggregate", command)
+    base = _stats({"status": "new"}, has_sort_stage=True, returned=1000)
+    stats = ShapeStats(**{**base.__dict__, "shape": shape, "meta": meta, "sample": command})
+    findings = run_rules(stats, IXSCAN_SORT, Catalog(STATUS_1))
+    assert [f.rule for f in findings] == ["sort_in_memory"]
+    rec = findings[0].recommendation
+    assert rec is not None and rec.kind == "rewrite" and "$first" in rec.statement
+    assert "straight into $group" in findings[0].message
 
 
 def test_negation_only_shapes_are_owned_by_negation_predicate() -> None:

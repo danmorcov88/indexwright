@@ -19,7 +19,8 @@ returned" says nothing about the index.
 Recommended indexes follow Equality, Sort, Range: equality fields first (`field: value`, `$eq`,
 `$in`, `$all`), then the sort fields in sort order and direction, then range fields
 (`$gt`, `$gte`, `$lt`, `$lte`, anchored `$regex`, `$exists: true`). Negations (`$ne`, `$nin`,
-`$exists: false`, `$not`) and operators an index cannot narrow are left out. `$and` clauses are
+`$exists: false`, `$not`), unanchored regexes and operators an index cannot narrow are left out.
+Recommended indexes that are a prefix of another recommended index are folded into the wider one. `$and` clauses are
 merged; a top-level `$or` gets one index per branch. When an existing index already starts with
 the recommended keys (same directions, or all flipped after the equality keys), nothing is
 recommended and the finding says which index covers it.
@@ -44,7 +45,9 @@ scan. `SORT_MERGE` does not count: it merges index-ordered streams.
 then it fails or spills to disk) and only then applies the limit.
 
 **Recommends:** the ESR index, which puts the sort fields right after the equality fields so
-the index returns documents already in order.
+the index returns documents already in order. When the `$sort` feeds a `$group` directly, an
+index would only trade the sort for random fetches, so the advice is to remove the `$sort`
+unless a `$first` or `$last` accumulator depends on the order.
 
 ## docs_examined_ratio
 
@@ -70,11 +73,13 @@ cause is in the message (for example an unanchored regex).
 
 ## unanchored_regex
 
-**Detects:** a `$regex` whose pattern does not start with `^`, on a field that has an index,
-and no collection scan (`collscan` owns that case).
+**Detects:** a `$regex` whose pattern does not start with `^`. Reported next to any other
+finding on the shape, because the fix is different.
 
 **Why it matters:** only an anchored pattern gives the planner index bounds. Anything else walks
-every key of the index.
+every key of the index, or every document. The ESR builder leaves such fields out, so no index
+is recommended for them: on a real run an index on the field made the query slower, the planner
+preferred walking the index over scanning the collection.
 
 **Recommends:** anchor the pattern, or use a text index for free-text search.
 

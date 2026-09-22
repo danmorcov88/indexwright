@@ -34,10 +34,10 @@ class Advice:
         return not self.recommendations and not self.covered
 
 
-def advise(shape: Shape, indexes: list[IndexInfo]) -> Advice:
+def advise(shape: Shape, indexes: list[IndexInfo], skip: frozenset[str] = frozenset()) -> Advice:
     recommendations: list[Recommendation] = []
     covered: list[str] = []
-    for candidate in candidates(shape):
+    for candidate in candidates(shape, skip):
         existing = covered_by(candidate, indexes)
         if existing is None:
             recommendations.append(recommendation(shape.ns, candidate.keys))
@@ -46,10 +46,12 @@ def advise(shape: Shape, indexes: list[IndexInfo]) -> Advice:
     return Advice(recommendations, covered)
 
 
-def candidates(shape: Shape) -> list[Candidate]:
+def candidates(shape: Shape, skip: frozenset[str] = frozenset()) -> list[Candidate]:
+    # Fields in skip (unanchored regexes) cannot be bounded by an index and are left out.
     result: list[Candidate] = []
     for fields in _branches(shape.filter):
-        candidate = _candidate(fields, shape.sort)
+        usable = {f: v for f, v in fields.items() if f not in skip}
+        candidate = _candidate(usable, shape.sort)
         if candidate.keys and candidate not in result:
             result.append(candidate)
     return result

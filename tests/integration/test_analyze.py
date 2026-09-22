@@ -35,14 +35,12 @@ def test_workload_findings_match_exactly(mongo: Mongo, workload: int) -> None:
     assert result.explains == len(EXPECTED_SHAPES)
 
     labels = {s.shape.fingerprint: (s.shape.op, compact(s.shape)) for s in result.shapes}
-    found: dict[tuple[str, str], tuple[str, str]] = {}
+    found: dict[tuple[str, str], set[tuple[str, str]]] = {}
     shape_findings = [f for f in result.findings if f.shape_id]
     for finding in shape_findings:
-        label = labels[finding.shape_id]
-        assert label not in found, f"{label} has more than one finding"
-        assert finding.recommendation is not None, f"{label}: {finding.message}"
         rec = finding.recommendation
-        found[label] = (finding.rule, format_keys(rec.keys) if rec.keys else rec.kind)
+        advice = "none" if rec is None else format_keys(rec.keys) if rec.keys else rec.kind
+        found.setdefault(labels[finding.shape_id], set()).add((finding.rule, advice))
     assert found == EXPECTED_FINDINGS
 
     for finding in shape_findings:
@@ -50,7 +48,7 @@ def test_workload_findings_match_exactly(mongo: Mongo, workload: int) -> None:
         assert "example.com" not in str(finding.evidence)
 
     statements = result.create_index_statements()
-    assert len(statements) == 6
+    assert len(statements) == 5
     assert sum(rec.ns == "app.customers" for rec, _ in statements) == 1
 
 
@@ -60,7 +58,7 @@ def test_analyze_command(mongo: Mongo, workload: int) -> None:
     actionable = " high " in result.output or " critical " in result.output
     assert result.exit_code == (EXIT_FINDINGS if actionable else EXIT_OK), result.output
     assert "Recommended indexes" in result.output
-    assert "db.orders.createIndex({email: 1}" in result.output
+    assert "db.orders.createIndex({status: 1, total: -1}" in result.output
     assert "Indexes to drop" in result.output
     assert 'db.orders.dropIndex("created_1")' in result.output
     assert "analyze:" in result.output and "20 shapes, 20 explains" in result.output

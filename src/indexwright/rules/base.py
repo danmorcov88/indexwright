@@ -54,7 +54,7 @@ def with_advice(
     evidence: dict[str, Any],
 ) -> list[Finding]:
     shape = stats.shape
-    advice = esr.advise(shape, catalog.for_ns(shape.ns))
+    advice = esr.advise(shape, catalog.for_ns(shape.ns), stats.meta.unanchored_regex)
     evidence = {**evidence, "count": stats.count, "p99_ms": stats.p99_ms}
     if advice.recommendations:
         return [
