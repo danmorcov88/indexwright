@@ -13,7 +13,9 @@ START = datetime(2026, 6, 1, tzinfo=UTC)
 # (op, compact shape) on app.orders that the shapes command must find after run().
 EXPECTED_SHAPES: set[tuple[str, str]] = {
     ("find", "{status:?}"),
-    ("find", "{status:?} sort {created:-1}"),
+    ("find", "{status:?} sort {total:-1}"),
+    ("find", "{status:?, total:{$gt:?}}"),
+    ("find", "{created:{$gte:?, $lt:?}, email:?}"),
     ("find", "{created:{$gte:?, $lt:?}}"),
     ("find", "{customer_id:{$in:[?]}}"),
     ("find", "{email:{$regex:?}}"),
@@ -24,17 +26,36 @@ EXPECTED_SHAPES: set[tuple[str, str]] = {
     ("aggregate", "[{$match:{status:?}}, {$group:{_id:?}}]"),
     ("distinct", "{created:{$gte:?}}"),
     ("update", "{_id:?}"),
-    ("update", "{created:{$lt:?}, status:?}"),
+    ("update", "{status:?, total:{$lt:?}}"),
     ("delete", "{status:?, total:{$lt:?}}"),
-    ("findAndModify", "{status:?} sort {created:1}"),
+    ("findAndModify", "{status:?} sort {total:1}"),
     (
         "aggregate",
-        "[{$match:{status:?}}, {$sort:{created:-1}}, {$group:{_id:$customer_id}}]",
+        "[{$match:{status:?}}, {$sort:{total:-1}}, {$group:{_id:$customer_id}}]",
     ),
     (
         "aggregate",
         "[{$match:{customer_id:?}}, "
         "{$lookup:{foreignField:_id, from:customers, localField:customer_id}}]",
+    ),
+}
+
+# (op, compact shape) -> (rule, recommended index keys). Every other shape must be clean.
+EXPECTED_FINDINGS: dict[tuple[str, str], tuple[str, str]] = {
+    ("find", "{email:{$regex:?}}"): ("collscan", "{email: 1}"),
+    ("find", "{$or:[{status:?}, {total:{$gt:?}}]}"): ("collscan", "{total: 1}"),
+    ("find", "{status:?} sort {total:-1}"): ("sort_in_memory", "{status: 1, total: -1}"),
+    ("findAndModify", "{status:?} sort {total:1}"): ("sort_in_memory", "{status: 1, total: 1}"),
+    (
+        "aggregate",
+        "[{$match:{status:?}}, {$sort:{total:-1}}, {$group:{_id:$customer_id}}]",
+    ): ("sort_in_memory", "{status: 1, total: -1}"),
+    ("find", "{status:?, total:{$gt:?}}"): ("docs_examined_ratio", "{status: 1, total: 1}"),
+    ("update", "{status:?, total:{$lt:?}}"): ("docs_examined_ratio", "{status: 1, total: 1}"),
+    ("delete", "{status:?, total:{$lt:?}}"): ("docs_examined_ratio", "{status: 1, total: 1}"),
+    ("find", "{created:{$gte:?, $lt:?}, email:?}"): (
+        "low_selectivity_index",
+        "{email: 1, created: 1}",
     ),
 }
 
@@ -65,6 +86,8 @@ def seed(client: MongoClient[dict[str, Any]]) -> None:
         ]
     )
     db.orders.create_index("customer_id")
+    db.orders.create_index("status")
+    db.orders.create_index([("created", 1), ("email", 1)])
 
 
 def run(client: MongoClient[dict[str, Any]]) -> int:
@@ -86,7 +109,15 @@ def run(client: MongoClient[dict[str, Any]]) -> int:
         list(orders.find({"status": "new"}, batch_size=20, limit=100))
         ops += 1
     for _ in range(60):
-        list(orders.find({"status": status()}).sort("created", -1).limit(20))
+        list(orders.find({"status": status()}).sort("total", -1).limit(20))
+        ops += 1
+    for _ in range(20):
+        list(orders.find({"status": status(), "total": {"$gt": 990}}))
+        ops += 1
+    for _ in range(20):
+        start = when()
+        email = f"user{rng.randint(1, 500)}@example.com"
+        list(orders.find({"created": {"$gte": start, "$lt": start + 3 * day}, "email": email}))
         ops += 1
     for _ in range(40):
         start = when()
@@ -127,7 +158,7 @@ def run(client: MongoClient[dict[str, Any]]) -> int:
         ops += 1
     for _ in range(10):
         orders.update_many(
-            {"status": "new", "created": {"$lt": START + day}}, {"$set": {"status": "cancelled"}}
+            {"status": "new", "total": {"$lt": 5}}, {"$set": {"status": "cancelled"}}
         )
         ops += 1
     for _ in range(10):
@@ -135,7 +166,7 @@ def run(client: MongoClient[dict[str, Any]]) -> int:
         ops += 1
     for _ in range(20):
         orders.find_one_and_update(
-            {"status": "new"}, {"$set": {"locked": True}}, sort=[("created", 1)]
+            {"status": "new"}, {"$set": {"locked": True}}, sort=[("total", 1)]
         )
         ops += 1
     for _ in range(20):
@@ -143,7 +174,7 @@ def run(client: MongoClient[dict[str, Any]]) -> int:
             orders.aggregate(
                 [
                     {"$match": {"status": status()}},
-                    {"$sort": {"created": -1}},
+                    {"$sort": {"total": -1}},
                     {"$group": {"_id": "$customer_id", "total": {"$sum": "$total"}}},
                 ]
             )

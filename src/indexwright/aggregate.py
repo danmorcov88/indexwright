@@ -41,6 +41,7 @@ class _Bucket:
         self.docs_examined = 0
         self.keys_examined = 0
         self.nreturned = 0
+        self.returned_known = False
         self.has_sort_stage = False
         self.plan_summaries: set[str] = set()
         self.meta = ShapeMeta()
@@ -56,7 +57,9 @@ class _Bucket:
         self.total_ms += entry.millis
         self.docs_examined += entry.docs_examined
         self.keys_examined += entry.keys_examined
-        self.nreturned += entry.nreturned
+        if entry.nreturned is not None:
+            self.nreturned += entry.nreturned
+            self.returned_known = True
         self.has_sort_stage = self.has_sort_stage or entry.has_sort_stage
         if entry.plan_summary:
             self.plan_summaries.add(entry.plan_summary)
@@ -81,4 +84,5 @@ class _Bucket:
             first_seen=self.first_seen,
             last_seen=self.last_seen,
             sample=self.sample,
+            returned_known=self.returned_known,
         )

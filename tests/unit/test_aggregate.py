@@ -19,7 +19,7 @@ def _entry(
     op: str = "find",
     docs: int = 100,
     keys: int = 0,
-    returned: int = 10,
+    returned: int | None = 10,
     getmore: bool = False,
     minute: int = 0,
     plan: str = "COLLSCAN",
@@ -119,6 +119,13 @@ def test_metadata_is_merged_across_entries() -> None:
     assert meta.in_size == 3
     assert meta.unanchored_regex == frozenset({"n"})
     assert meta.projection_present
+
+
+def test_unknown_returned_counts_are_not_summed() -> None:
+    known = group([_entry(1, returned=5), _entry(1, returned=None)])[0]
+    assert known.nreturned == 5 and known.returned_known
+    unknown = group([_entry(1, returned=None)])[0]
+    assert unknown.nreturned == 0 and not unknown.returned_known
 
 
 def test_ratio_with_nothing_returned_does_not_divide_by_zero() -> None:

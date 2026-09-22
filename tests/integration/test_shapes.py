@@ -32,7 +32,7 @@ def test_workload_groups_into_expected_shapes(mongo: Mongo, workload: int) -> No
     equality = by_shape[("find", "{status:?}")]
     assert equality.count == 70, "getMore batches must not count as executions"
     assert equality.nreturned > 70 * 101, "getMore batches must add to returned documents"
-    assert "COLLSCAN" in equality.plan_summaries
+    assert equality.plan_summaries == frozenset({"IXSCAN { status: 1 }"})
     assert by_shape[("find", "{customer_id:{$in:[?]}}")].meta.in_size == 250
     assert by_shape[("find", "{email:{$regex:?}}")].meta.unanchored_regex == frozenset({"email"})
     assert (

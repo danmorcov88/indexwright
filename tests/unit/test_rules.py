@@ -191,6 +191,15 @@ def test_low_selectivity_with_the_right_index_already_present() -> None:
     assert "country_1 already covers {country: 1}" in finding.message
 
 
+def test_ratio_rules_need_a_known_returned_count() -> None:
+    stats = _stats({"created": {"$gte": 1}}, op="distinct", keys=5000, returned=0)
+    unknown = ShapeStats(**{**stats.__dict__, "returned_known": False})
+    plan = ExplainResult(("FETCH", "IXSCAN"), ("created_1_email_1",))
+    assert run_rules(unknown, plan, [CREATED_EMAIL]) == []
+    assert run_rules(unknown, IXSCAN_RESIDUAL, [STATUS_1]) == []
+    assert [f.rule for f in run_rules(unknown, COLLSCAN, [])] == ["collscan"]
+
+
 def test_good_queries_produce_nothing() -> None:
     assert run_rules(_stats({"customer_id": 7}), IXSCAN, [STATUS_1]) == []
     assert run_rules(_stats({"_id": 1}), ExplainResult(("IDHACK",)), []) == []
@@ -203,3 +212,19 @@ def test_sort_findings_orders_by_severity_then_weight() -> None:
     c = run_rules(_stats({"c": 1}, count=10, docs=5000, returned=1), COLLSCAN, [])[0]
     ordered = sort_findings([c, b, a], {b.shape_id: 10, c.shape_id: 20})
     assert [f.shape_id for f in ordered] == [a.shape_id, c.shape_id, b.shape_id]
+
+
+def test_sort_in_memory_owns_shapes_with_a_limit_ratio() -> None:
+    stats = _stats({"status": "new"}, {"total": -1}, keys=1000, docs=1000, returned=20)
+    assert [f.rule for f in run_rules(stats, IXSCAN_SORT, [STATUS_1])] == ["sort_in_memory"]
+    with_residual = ExplainResult(("SORT", "FETCH", "IXSCAN"), ("status_1",), frozenset({"x"}))
+    stats = _stats({"status": "new", "x": {"$gt": 1}}, {"total": -1}, docs=1000, returned=5)
+    assert [f.rule for f in run_rules(stats, with_residual, [STATUS_1])] == ["sort_in_memory"]
+
+
+def test_low_selectivity_names_an_unanchored_regex_as_the_cause() -> None:
+    stats = _stats({"email": {"$regex": "user1"}}, keys=5000, returned=16)
+    plan = ExplainResult(("FETCH", "IXSCAN"), ("email_1",))
+    finding = run_rules(stats, plan, [IndexInfo("app.orders", "email_1", (("email", 1),))])[0]
+    assert "regex on email is not anchored" in finding.message
+    assert finding.recommendation is None

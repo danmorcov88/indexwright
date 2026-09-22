@@ -107,12 +107,13 @@ def explain_command(op: str, ns: str, sample: dict[str, Any]) -> dict[str, Any] 
         return None
     coll = ns.split(".", 1)[1]
     clean = {k: v for k, v in sample.items() if k not in STRIPPED_KEYS and not k.startswith("$")}
-    if op == "update":
-        update = _pick(clean, "q", "u", "multi", "upsert", "collation", "arrayFilters")
-        return {"update": coll, "updates": [update]}
-    if op == "delete":
-        delete = {"limit": 0, **_pick(clean, "q", "limit", "collation")}
-        return {"delete": coll, "deletes": [delete]}
+    # A read-only user may not explain writes. The query part of a write plans exactly like
+    # a find with the same filter, so writes are explained that way.
+    if op in ("update", "delete"):
+        return {"find": coll, "filter": clean.get("q", {}), **_pick(clean, "collation")}
+    if op == "findAndModify":
+        find = {"find": coll, "filter": clean.get("query", {}), "limit": 1}
+        return {**find, **_pick(clean, "sort", "collation")}
     return clean if op in clean else None
 
 

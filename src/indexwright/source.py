@@ -58,7 +58,7 @@ def to_entry(doc: dict[str, Any]) -> Entry | None:
     own = str(doc.get("appName", "")).startswith("indexwright")
     if op is None or ".system." in ns or own:
         return None
-    nreturned = doc.get("nreturned") or doc.get("nMatched") or doc.get("ndeleted") or 0
+    nreturned = _first_present(doc, "nreturned", "nMatched", "ndeleted")
     return Entry(
         ns=ns,
         op=op,
@@ -66,12 +66,19 @@ def to_entry(doc: dict[str, Any]) -> Entry | None:
         millis=int(doc.get("millis", 0)),
         docs_examined=int(doc.get("docsExamined", 0)),
         keys_examined=int(doc.get("keysExamined", 0)),
-        nreturned=int(nreturned),
+        nreturned=None if nreturned is None else int(nreturned),
         has_sort_stage=bool(doc.get("hasSortStage")),
         plan_summary=str(doc.get("planSummary", "")),
         command=command,
         getmore=getmore,
     )
+
+
+def _first_present(doc: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key in doc:
+            return doc[key]
+    return None
 
 
 def _resolve_op(profile_op: Any, command: dict[str, Any]) -> str | None:

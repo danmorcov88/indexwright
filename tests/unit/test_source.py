@@ -71,10 +71,10 @@ def test_delete_uses_deleted_count_as_returned() -> None:
     assert entry is not None and entry.nreturned == 2
 
 
-def test_missing_counters_default_to_zero() -> None:
+def test_missing_counters_default_to_zero_and_unknown_returned() -> None:
     entry = to_entry(_doc("command", {"distinct": "orders", "key": "s"}))
     assert entry is not None
-    assert (entry.docs_examined, entry.keys_examined, entry.nreturned) == (0, 0, 0)
+    assert (entry.docs_examined, entry.keys_examined, entry.nreturned) == (0, 0, None)
     assert not entry.has_sort_stage and entry.plan_summary == ""
 
 

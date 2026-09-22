@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from indexwright.rules.base import is_collscan, severity, usable, with_advice
+from indexwright.rules.sort_in_memory import sorts_in_memory
 
 if TYPE_CHECKING:
     from indexwright.model import ExplainResult, Finding, IndexInfo, ShapeStats
@@ -14,7 +15,9 @@ def check(
     stats: ShapeStats, explain: ExplainResult | None, indexes: list[IndexInfo]
 ) -> list[Finding]:
     plan = usable(explain)
-    if plan is None or is_collscan(stats, explain) or not plan.fetch_filter_fields:
+    if plan is None or not stats.returned_known or not plan.fetch_filter_fields:
+        return []
+    if is_collscan(stats, explain) or sorts_in_memory(stats, explain):
         return []
     if stats.docs_per_returned <= THRESHOLD:
         return []

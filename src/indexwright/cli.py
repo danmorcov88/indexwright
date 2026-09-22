@@ -14,6 +14,7 @@ from rich.table import Table
 
 from indexwright import __version__
 from indexwright.aggregate import group
+from indexwright.analysis import analyze as run_analysis
 from indexwright.doctor import run_checks
 from indexwright.mongo import ConnectError, Settings, WriteAccessError, connect, mask_uri
 from indexwright.shape import compact
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
 
     from indexwright.doctor import Check
-    from indexwright.model import Entry, ShapeStats
+    from indexwright.model import Entry, Finding, Shape, ShapeStats
     from indexwright.mongo import Connection
 
 EXIT_OK = 0
@@ -39,6 +40,13 @@ stdout = Console()
 stderr = Console(stderr=True)
 
 STATUS_STYLE = {"ok": "green", "warn": "yellow", "fail": "red"}
+SEVERITY_STYLE = {
+    "critical": "bold red",
+    "high": "red",
+    "medium": "yellow",
+    "low": "cyan",
+    "info": "dim",
+}
 
 
 def _print_version(value: bool) -> None:
@@ -71,6 +79,7 @@ Since = Annotated[
     str, typer.Option("--since", help="Only profile entries newer than: 30m, 24h, 7d")
 ]
 Limit = Annotated[int, typer.Option("--limit", help="Max profile entries to read per database")]
+MaxExplains = Annotated[int, typer.Option("--max-explains", help="Max explain calls per run")]
 
 
 @app.command()
@@ -123,6 +132,63 @@ def _parse_since(text: str) -> timedelta:
         raise typer.BadParameter("use a number followed by m, h or d, for example 24h")
     amount, unit = int(match.group(1)), match.group(2)
     return timedelta(**{{"m": "minutes", "h": "hours", "d": "days"}[unit]: amount})
+
+
+@app.command()
+def analyze(
+    ctx: typer.Context,
+    uri: Uri,
+    db: Db = None,
+    since: Since = "24h",
+    limit: Limit = 50_000,
+    max_explains: MaxExplains = 200,
+) -> None:
+    """Find slow query shapes and recommend indexes. Exit 1 when high findings exist."""
+    settings = Settings(uri=uri, timeout=ctx.obj, db=db)
+    cutoff = datetime.now(UTC) - _parse_since(since)
+    started = time.monotonic()
+    result = _with_connection(
+        settings, lambda conn: run_analysis(conn, cutoff, limit, max_explains)
+    )
+    if result.failed_checks:
+        stdout.print(_checks_table(result.checks))
+        stderr.print("analyze: doctor checks failed, fix them first")
+        raise typer.Exit(EXIT_FINDINGS)
+    for check in result.checks:
+        if check.status == "warn":
+            stderr.print(f"warning: {check.name}: {check.detail}", soft_wrap=True)
+    shapes = {s.shape.fingerprint: s.shape for s in result.shapes}
+    stdout.print(_findings_table(result.findings, shapes))
+    statements = result.create_index_statements()
+    if statements:
+        stdout.print()
+        stdout.print("[bold]Recommended indexes[/bold]")
+        for rec, shape_ids in statements:
+            served = ", ".join(sid[:10] for sid in shape_ids)
+            stdout.print(f"  {rec.statement}   [dim]# shapes {served}[/dim]", soft_wrap=True)
+    stderr.print(
+        f"analyze: {result.entries_read} entries read, {len(result.shapes)} shapes, "
+        f"{result.explains} explains, {len(result.findings)} findings, "
+        f"{time.monotonic() - started:.1f}s"
+    )
+    raise typer.Exit(EXIT_FINDINGS if result.actionable else EXIT_OK)
+
+
+def _findings_table(findings: list[Finding], shapes: dict[str, Shape]) -> Table:
+    table = Table(title="findings", expand=True)
+    table.add_column("severity", no_wrap=True)
+    table.add_column("rule", no_wrap=True)
+    table.add_column("ns", no_wrap=True)
+    table.add_column("shape", ratio=1, overflow="fold")
+    table.add_column("message", ratio=2, overflow="fold")
+    for f in findings:
+        style = SEVERITY_STYLE[f.severity]
+        shape = shapes.get(f.shape_id)
+        label = f"{shape.op} {compact(shape)}" if shape else f.shape_id[:10]
+        table.add_row(f"[{style}]{f.severity}[/{style}]", f.rule, f.ns, label, f.message)
+    if not findings:
+        table.add_row("", "", "", "", "no findings")
+    return table
 
 
 def _shapes_table(stats: list[ShapeStats]) -> Table:
@@ -178,3 +244,7 @@ def _checks_table(checks: list[Check]) -> Table:
         style = STATUS_STYLE[check.status]
         table.add_row(check.name, f"[{style}]{check.status.upper()}[/{style}]", check.detail)
     return table
+
+
+if __name__ == "__main__":
+    app()

@@ -21,7 +21,7 @@ class Entry:
     millis: int
     docs_examined: int
     keys_examined: int
-    nreturned: int
+    nreturned: int | None
     has_sort_stage: bool
     plan_summary: str
     command: dict[str, Any]
@@ -68,6 +68,8 @@ class ShapeStats:
     meta: ShapeMeta
     first_seen: datetime
     last_seen: datetime
+    # distinct entries carry no returned count, so a ratio over nreturned would be meaningless.
+    returned_known: bool = True
     # One real command of this shape, with its values. Only used to run explain; never reported.
     sample: dict[str, Any] = field(default_factory=dict, repr=False)
 

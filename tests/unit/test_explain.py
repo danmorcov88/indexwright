@@ -115,22 +115,19 @@ def test_explain_command_strips_session_fields() -> None:
     assert explain_command("find", "app.orders", sample) == {"find": "orders", "filter": {"a": 1}}
 
 
-def test_explain_command_for_update_and_delete() -> None:
+def test_writes_are_explained_as_the_equivalent_find() -> None:
     update = explain_command(
-        "update",
-        "app.orders",
-        {"q": {"a": 1}, "u": {"$set": {"b": 1}}, "multi": True, "upsert": False},
+        "update", "app.orders", {"q": {"a": 1}, "u": {"$set": {"b": 1}}, "multi": True}
     )
-    assert update == {
-        "update": "orders",
-        "updates": [{"q": {"a": 1}, "u": {"$set": {"b": 1}}, "multi": True, "upsert": False}],
-    }
+    assert update == {"find": "orders", "filter": {"a": 1}}
     delete = explain_command("delete", "app.orders", {"q": {"a": 1}, "limit": 1})
-    assert delete == {"delete": "orders", "deletes": [{"q": {"a": 1}, "limit": 1}]}
-    assert explain_command("delete", "app.orders", {"q": {"a": 1}}) == {
-        "delete": "orders",
-        "deletes": [{"q": {"a": 1}, "limit": 0}],
-    }
+    assert delete == {"find": "orders", "filter": {"a": 1}}
+    modify = explain_command(
+        "findAndModify",
+        "app.orders",
+        {"findAndModify": "orders", "query": {"a": 1}, "sort": {"b": 1}, "update": {"$set": {}}},
+    )
+    assert modify == {"find": "orders", "filter": {"a": 1}, "limit": 1, "sort": {"b": 1}}
 
 
 def test_explain_command_rejects_empty_or_foreign_samples() -> None:
@@ -153,7 +150,9 @@ class FakeConn:
 def _stats(command: dict[str, Any], op: str = "find", ns: str = "app.orders") -> ShapeStats:
     shape, meta = normalize(ns, op, command)
     now = datetime(2026, 9, 22, tzinfo=UTC)
-    return ShapeStats(shape, 1, 1, 1, 1, 1, 10, 0, 1, False, frozenset(), meta, now, now, command)
+    return ShapeStats(
+        shape, 1, 1, 1, 1, 1, 10, 0, 1, False, frozenset(), meta, now, now, sample=command
+    )
 
 
 def _explainer(conn: Any, **kw: Any) -> tuple[Explainer, list[float]]:
