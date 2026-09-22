@@ -24,11 +24,14 @@ db.createUser({
 })
 ```
 
-## Check the setup
+## Commands
 
 ```sh
 export MONGODB_URI="mongodb://indexwright:<password>@host:27017/app?authSource=admin"
-indexwright doctor
+indexwright doctor                       # connectivity, version, privileges, profiler, $indexStats
+indexwright shapes --db app --since 24h  # query shapes with count, p50, p99, docs examined per returned
 ```
 
 Exit codes: `0` ok, `1` a check failed, `2` cannot connect, `3` the user has write access.
+
+The profiler must be on: `db.setProfilingLevel(1, {slowms: 100})`. See [how it works](docs/how-it-works.md).

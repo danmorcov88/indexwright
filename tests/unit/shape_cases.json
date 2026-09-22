@@ -782,6 +782,36 @@
     }
   },
   {
+    "name": "find_elem_match_with_operators_only",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "scores": {
+          "$elemMatch": {
+            "$gte": 80,
+            "$lt": 90
+          }
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "scores": {
+          "$elemMatch": {
+            "$gte": "?",
+            "$lt": "?"
+          }
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
     "name": "find_or",
     "op": "find",
     "command": {

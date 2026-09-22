@@ -85,6 +85,13 @@ def test_python_compiled_regex() -> None:
     assert meta.unanchored_regex == frozenset({"a"})
 
 
+def test_regex_as_plain_strings_with_options() -> None:
+    command = {"find": "orders", "filter": {"a": {"$regex": "x", "$options": "i"}}}
+    shape, meta = normalize("app.orders", "find", command)
+    assert shape.filter == {"a": {"$regex": "?"}}
+    assert meta.unanchored_regex == frozenset({"a"})
+
+
 def test_unknown_op_still_produces_a_shape() -> None:
     shape, _ = normalize("app.orders", "explain", {"explain": {}})
     assert shape.filter == {} and shape.sort == [] and shape.pipeline is None

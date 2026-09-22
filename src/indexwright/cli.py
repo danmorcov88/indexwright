@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
 import time
-from typing import TYPE_CHECKING, Annotated, NoReturn, TypeVar
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Annotated, Generic, NoReturn, TypeVar
 
 import typer
 from pymongo.errors import PyMongoError
@@ -11,13 +13,17 @@ from rich.console import Console
 from rich.table import Table
 
 from indexwright import __version__
+from indexwright.aggregate import group
 from indexwright.doctor import run_checks
 from indexwright.mongo import ConnectError, Settings, WriteAccessError, connect, mask_uri
+from indexwright.shape import compact
+from indexwright.source import read_all
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Iterator
 
     from indexwright.doctor import Check
+    from indexwright.model import Entry, ShapeStats
     from indexwright.mongo import Connection
 
 EXIT_OK = 0
@@ -61,6 +67,10 @@ def main(
 
 Uri = Annotated[str, typer.Option("--uri", envvar="MONGODB_URI", show_default=False)]
 Db = Annotated[str | None, typer.Option("--db", help="Limit to one database")]
+Since = Annotated[
+    str, typer.Option("--since", help="Only profile entries newer than: 30m, 24h, 7d")
+]
+Limit = Annotated[int, typer.Option("--limit", help="Max profile entries to read per database")]
 
 
 @app.command()
@@ -77,6 +87,64 @@ def doctor(ctx: typer.Context, uri: Uri, db: Db = None) -> None:
         f"{time.monotonic() - started:.1f}s"
     )
     raise typer.Exit(EXIT_FINDINGS if failed else EXIT_OK)
+
+
+@app.command()
+def shapes(
+    ctx: typer.Context, uri: Uri, db: Db = None, since: Since = "24h", limit: Limit = 50_000
+) -> None:
+    """List query shapes from the profiler with counts and latencies. No rules."""
+    settings = Settings(uri=uri, timeout=ctx.obj, db=db)
+    cutoff = datetime.now(UTC) - _parse_since(since)
+    started = time.monotonic()
+    entries: _Counted[Entry] = _Counted()
+    stats = _with_connection(
+        settings, lambda conn: group(entries.wrap(read_all(conn, cutoff, limit)))
+    )
+    stdout.print(_shapes_table(stats))
+    stderr.print(
+        f"shapes: {entries.n} entries read, {len(stats)} shapes, {time.monotonic() - started:.1f}s"
+    )
+
+
+class _Counted(Generic[T]):
+    def __init__(self) -> None:
+        self.n = 0
+
+    def wrap(self, items: Iterable[T]) -> Iterator[T]:
+        for item in items:
+            self.n += 1
+            yield item
+
+
+def _parse_since(text: str) -> timedelta:
+    match = re.fullmatch(r"(\d+)([mhd])", text.strip())
+    if not match:
+        raise typer.BadParameter("use a number followed by m, h or d, for example 24h")
+    amount, unit = int(match.group(1)), match.group(2)
+    return timedelta(**{{"m": "minutes", "h": "hours", "d": "days"}[unit]: amount})
+
+
+def _shapes_table(stats: list[ShapeStats]) -> Table:
+    table = Table(title="query shapes", expand=True)
+    table.add_column("ns", no_wrap=True)
+    table.add_column("op", no_wrap=True)
+    table.add_column("shape", ratio=1, overflow="fold")
+    table.add_column("n", justify="right")
+    table.add_column("p50", justify="right")
+    table.add_column("p99", justify="right")
+    table.add_column("docs/ret", justify="right")
+    for s in stats:
+        table.add_row(
+            s.shape.ns,
+            s.shape.op,
+            compact(s.shape),
+            str(s.count),
+            str(s.p50_ms),
+            str(s.p99_ms),
+            f"{s.docs_per_returned:.0f}",
+        )
+    return table
 
 
 def _with_connection(settings: Settings, fn: Callable[[Connection], T]) -> T:

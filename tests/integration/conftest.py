@@ -60,3 +60,19 @@ def mongo() -> Iterator[Mongo]:
         )
         yield Mongo(container.get_container_host_ip(), int(container.get_exposed_port(27017)), root)
         root.close()
+
+
+@pytest.fixture(scope="session")
+def workload(mongo: Mongo) -> int:
+    from tests.integration import workload as wl
+
+    db = mongo.root[APP_DB]
+    wl.seed(mongo.root)
+    # The default 1 MB system.profile would evict most of the workload.
+    db.command("profile", 0)
+    db.system.profile.drop()
+    db.create_collection("system.profile", capped=True, size=64 * 1024 * 1024)
+    db.command("profile", 2)
+    ops = wl.run(mongo.root)
+    db.command("profile", 1, slowms=0)
+    return ops
