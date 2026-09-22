@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Index hygiene rules `duplicate_index`, `redundant_index`, `unused_index`, `too_many_indexes`; `_id`, unique and TTL indexes are never proposed for dropping.
 - Index usage read from every replica set member through `$indexStats` (ops summed, earliest `since`), with unreachable members reported instead of silently ignored.
 - `analyze` command: doctor checks, then shapes, explain, rules, a findings table and deduplicated `createIndex` statements. Exit 1 when a `high` or `critical` finding exists.
 - Rules `collscan`, `sort_in_memory`, `docs_examined_ratio`, `low_selectivity_index`. Each shape gets at most one owner rule, so one bad query yields one recommendation.

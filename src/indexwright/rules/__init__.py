@@ -3,11 +3,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from indexwright.model import SEVERITY_ORDER
-from indexwright.rules import collscan, docs_examined_ratio, low_selectivity_index, sort_in_memory
+from indexwright.rules import (
+    collscan,
+    docs_examined_ratio,
+    index_rules,
+    low_selectivity_index,
+    sort_in_memory,
+)
 
 if TYPE_CHECKING:
-    from indexwright.model import ExplainResult, Finding, IndexInfo, ShapeStats
+    from collections.abc import Callable
+
+    from indexwright.model import CollectionIndexes, ExplainResult, Finding, IndexInfo, ShapeStats
     from indexwright.rules.base import Rule
+
+    IndexRule = Callable[[CollectionIndexes, set[str]], list[Finding]]
 
 RULES: list[tuple[str, Rule]] = [
     ("collscan", collscan.check),
@@ -15,6 +25,24 @@ RULES: list[tuple[str, Rule]] = [
     ("docs_examined_ratio", docs_examined_ratio.check),
     ("low_selectivity_index", low_selectivity_index.check),
 ]
+
+
+INDEX_RULES: list[tuple[str, IndexRule]] = [
+    ("duplicate_index", index_rules.duplicate_index),
+    ("redundant_index", index_rules.redundant_index),
+    ("unused_index", index_rules.unused_index),
+    ("too_many_indexes", index_rules.too_many_indexes),
+]
+
+
+def run_index_rules(coll: CollectionIndexes) -> list[Finding]:
+    findings: list[Finding] = []
+    dropped: set[str] = set()
+    for _, rule in INDEX_RULES:
+        new = rule(coll, dropped)
+        findings.extend(new)
+        dropped.update(str(f.evidence["index"]) for f in new if "index" in f.evidence)
+    return findings
 
 
 def run_rules(
