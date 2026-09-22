@@ -12,7 +12,7 @@ from pymongo.errors import (
 )
 
 from indexwright import mongo
-from indexwright.mongo import Settings, mask_uri, retry
+from indexwright.mongo import Connection, Settings, mask_uri, retry
 
 
 @pytest.mark.parametrize(
@@ -102,25 +102,26 @@ class FakeClient:
         return self.db
 
 
-def _client(responses: dict[str, dict[str, Any]]) -> Any:
-    return FakeClient(responses)
+def _conn(responses: dict[str, dict[str, Any]], db: str | None = None) -> Connection:
+    client: Any = FakeClient(responses)
+    return Connection(client, Settings(uri="mongodb://h", timeout=2.5, db=db))
 
 
 def test_command_injects_max_time_ms() -> None:
-    client = _client({"ping": {"ok": 1}})
-    mongo.command(client, "admin", {"ping": 1}, Settings(uri="mongodb://h", timeout=2.5))
-    assert client.db.commands == [{"ping": 1, "maxTimeMS": 2500}]
+    conn = _conn({"ping": {"ok": 1}})
+    conn.command("admin", {"ping": 1})
+    assert conn.client.db.commands == [{"ping": 1, "maxTimeMS": 2500}]
 
 
 def test_server_version_accepts_5_and_newer() -> None:
-    client = _client({"buildInfo": {"version": "7.0.12", "versionArray": [7, 0, 12, 0]}})
-    assert mongo.server_version(client, Settings(uri="mongodb://h")) == (7, 0, 12)
+    conn = _conn({"buildInfo": {"version": "7.0.12", "versionArray": [7, 0, 12, 0]}})
+    assert mongo.server_version(conn) == (7, 0, 12)
 
 
 def test_server_version_rejects_old_servers() -> None:
-    client = _client({"buildInfo": {"version": "4.4.29", "versionArray": [4, 4, 29, 0]}})
-    with pytest.raises(mongo.UnsupportedVersionError, match=r"4.4.29"):
-        mongo.server_version(client, Settings(uri="mongodb://h"))
+    conn = _conn({"buildInfo": {"version": "4.4.29", "versionArray": [4, 4, 29, 0]}})
+    with pytest.raises(mongo.UnsupportedVersionError, match=r"4\.4\.29"):
+        mongo.server_version(conn)
 
 
 def _connection_status(
@@ -147,8 +148,8 @@ READ_ONLY: list[tuple[dict[str, Any], list[str]]] = [
 
 def test_privileges_read_only_user_passes() -> None:
     status = _connection_status([("read", "app"), ("clusterMonitor", "admin")], READ_ONLY)
-    client = _client({"connectionStatus": status})
-    result = mongo.check_privileges(client, Settings(uri="mongodb://h"))
+    conn = _conn({"connectionStatus": status})
+    result = mongo.check_privileges(conn)
     assert result.authenticated
     assert result.write_grants == ()
     assert result.roles == ("read@app", "clusterMonitor@admin")
@@ -160,8 +161,8 @@ def test_privileges_read_write_user_is_refused() -> None:
         ({"db": "app", "collection": ""}, ["find", "insert", "update", "remove", "createIndex"]),
     ]
     status = _connection_status([("readWrite", "app")], privileges)
-    client = _client({"connectionStatus": status})
-    result = mongo.check_privileges(client, Settings(uri="mongodb://h"))
+    conn = _conn({"connectionStatus": status})
+    result = mongo.check_privileges(conn)
     assert result.write_grants == (
         "createIndex on app.*",
         "insert on app.*",
@@ -173,23 +174,22 @@ def test_privileges_read_write_user_is_refused() -> None:
 def test_privileges_write_on_other_db_is_fine_when_db_is_targeted() -> None:
     privileges = [*READ_ONLY, ({"db": "other", "collection": ""}, ["insert"])]
     status = _connection_status([("readWrite", "other")], privileges)
-    client = _client({"connectionStatus": status})
-    assert mongo.check_privileges(client, Settings(uri="mongodb://h", db="app")).write_grants == ()
-    assert mongo.check_privileges(client, Settings(uri="mongodb://h")).write_grants == (
+    assert mongo.check_privileges(_conn({"connectionStatus": status}, "app")).write_grants == ()
+    assert mongo.check_privileges(_conn({"connectionStatus": status})).write_grants == (
         "insert on other.*",
     )
 
 
 def test_privileges_root_is_refused() -> None:
     status = _connection_status([("root", "admin")], [({"anyResource": True}, ["anyAction"])])
-    client = _client({"connectionStatus": status})
-    result = mongo.check_privileges(client, Settings(uri="mongodb://h", db="app"))
+    conn = _conn({"connectionStatus": status}, "app")
+    result = mongo.check_privileges(conn)
     assert result.write_grants == ("anyAction on anyResource",)
 
 
 def test_privileges_unauthenticated_connection() -> None:
-    client = _client({"connectionStatus": _connection_status([], [])})
-    result = mongo.check_privileges(client, Settings(uri="mongodb://h"))
+    conn = _conn({"connectionStatus": _connection_status([], [])})
+    result = mongo.check_privileges(conn)
     assert not result.authenticated
     assert result.write_grants == ()
 
@@ -203,6 +203,6 @@ def test_privileges_unauthenticated_connection() -> None:
     ],
 )
 def test_topology(hello: dict[str, Any], kind: str, name: str | None, members: int) -> None:
-    client = _client({"hello": hello})
-    topo = mongo.topology(client, Settings(uri="mongodb://h"))
+    conn = _conn({"hello": hello})
+    topo = mongo.topology(conn)
     assert (topo.kind, topo.name, len(topo.hosts)) == (kind, name, members)

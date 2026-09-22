@@ -4,7 +4,7 @@ import logging
 import random
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from pymongo import MongoClient
@@ -131,12 +131,25 @@ def retry(
     raise AssertionError("unreachable")
 
 
-def command(client: Client, db: str, spec: dict[str, Any], settings: Settings) -> dict[str, Any]:
-    full = {**spec, "maxTimeMS": settings.max_time_ms}
-    return retry(lambda: client[db].command(full))
+@dataclass
+class Connection:
+    client: Client
+    settings: Settings
+    privileges: Privileges = field(default_factory=lambda: Privileges((), (), ()))
+
+    def command(self, db: str, spec: dict[str, Any]) -> dict[str, Any]:
+        full = {**spec, "maxTimeMS": self.settings.max_time_ms}
+        return retry(lambda: self.client[db].command(full))
+
+    @property
+    def max_time_ms(self) -> int:
+        return self.settings.max_time_ms
+
+    def close(self) -> None:
+        self.client.close()
 
 
-def connect(settings: Settings) -> Client:
+def connect(settings: Settings) -> Connection:
     ms = settings.max_time_ms
     try:
         client: Client = MongoClient(
@@ -149,21 +162,26 @@ def connect(settings: Settings) -> Client:
         )
     except ConfigurationError as exc:
         raise ConnectError(f"invalid connection string: {exc}") from exc
+    conn = Connection(client, settings)
     try:
-        command(client, "admin", {"ping": 1}, settings)
+        conn.command("admin", {"ping": 1})
+        conn.privileges = check_privileges(conn)
     except ServerSelectionTimeoutError as exc:
-        client.close()
+        conn.close()
         raise ConnectError(f"cannot reach {mask_uri(settings.uri)}: {exc}") from exc
     except OperationFailure as exc:
-        client.close()
+        conn.close()
         if exc.code == AUTHENTICATION_FAILED:
             raise ConnectError(f"authentication failed for {mask_uri(settings.uri)}") from exc
-        raise ConnectError(f"ping failed: {exc}") from exc
-    return client
+        raise ConnectError(f"{exc.details.get('errmsg', exc) if exc.details else exc}") from exc
+    if conn.privileges.write_grants:
+        conn.close()
+        raise WriteAccessError(list(conn.privileges.write_grants))
+    return conn
 
 
-def server_version(client: Client, settings: Settings) -> tuple[int, int, int]:
-    info = command(client, "admin", {"buildInfo": 1}, settings)
+def server_version(conn: Connection) -> tuple[int, int, int]:
+    info = conn.command("admin", {"buildInfo": 1})
     major, minor, patch = info["versionArray"][:3]
     version = (int(major), int(minor), int(patch))
     if version < MIN_VERSION:
@@ -173,15 +191,15 @@ def server_version(client: Client, settings: Settings) -> tuple[int, int, int]:
     return version
 
 
-def check_privileges(client: Client, settings: Settings) -> Privileges:
-    status = command(client, "admin", {"connectionStatus": 1, "showPrivileges": True}, settings)
+def check_privileges(conn: Connection) -> Privileges:
+    status = conn.command("admin", {"connectionStatus": 1, "showPrivileges": True})
     info = status["authInfo"]
     users = tuple(f"{u['user']}@{u['db']}" for u in info["authenticatedUsers"])
     roles = tuple(f"{r['role']}@{r['db']}" for r in info["authenticatedUserRoles"])
     grants = tuple(
         f"{action} on {_describe(p['resource'])}"
         for p in info.get("authenticatedUserPrivileges", [])
-        if _touches_target(p["resource"], settings.db)
+        if _touches_target(p["resource"], conn.settings.db)
         for action in sorted(WRITE_ACTIONS.intersection(p["actions"]))
     )
     return Privileges(users, roles, grants)
@@ -200,8 +218,8 @@ def _describe(resource: dict[str, Any]) -> str:
     return f"{resource['db'] or '*'}.{resource.get('collection') or '*'}"
 
 
-def topology(client: Client, settings: Settings) -> Topology:
-    hello = command(client, "admin", {"hello": 1}, settings)
+def topology(conn: Connection) -> Topology:
+    hello = conn.command("admin", {"hello": 1})
     if hello.get("msg") == "isdbgrid":
         return Topology("sharded")
     if "setName" in hello:
@@ -209,26 +227,27 @@ def topology(client: Client, settings: Settings) -> Topology:
     return Topology("standalone")
 
 
-def user_databases(client: Client, settings: Settings) -> list[str]:
-    result = command(client, "admin", {"listDatabases": 1, "nameOnly": True}, settings)
+def user_databases(conn: Connection) -> list[str]:
+    result = conn.command("admin", {"listDatabases": 1, "nameOnly": True})
     return [d["name"] for d in result["databases"] if d["name"] not in ("admin", "local", "config")]
 
 
-def profiler_status(client: Client, db: str, settings: Settings) -> ProfilerStatus:
+def profiler_status(conn: Connection, db: str) -> ProfilerStatus:
     level = slow_ms = None
     try:
-        result = command(client, db, {"profile": -1}, settings)
+        result = conn.command(db, {"profile": -1})
         level, slow_ms = int(result["was"]), int(result["slowms"])
     except OperationFailure as exc:
         if exc.code != UNAUTHORIZED:
             raise
+    database = conn.client[db]
     names = retry(
-        lambda: client[db].list_collection_names(
-            filter={"name": "system.profile"}, maxTimeMS=settings.max_time_ms
+        lambda: database.list_collection_names(
+            filter={"name": "system.profile"}, maxTimeMS=conn.max_time_ms
         )
     )
     try:
-        retry(lambda: client[db]["system.profile"].find_one({}, max_time_ms=settings.max_time_ms))
+        retry(lambda: database["system.profile"].find_one({}, max_time_ms=conn.max_time_ms))
         readable = True
     except OperationFailure as exc:
         if exc.code != UNAUTHORIZED:
@@ -237,19 +256,18 @@ def profiler_status(client: Client, db: str, settings: Settings) -> ProfilerStat
     return ProfilerStatus(db, level, slow_ms, bool(names), readable)
 
 
-def index_stats_available(client: Client, db: str, settings: Settings) -> bool | None:
+def index_stats_available(conn: Connection, db: str) -> bool | None:
+    database = conn.client[db]
     names = retry(
-        lambda: client[db].list_collection_names(
-            filter={"name": {"$not": {"$regex": "^system\\."}}}, maxTimeMS=settings.max_time_ms
+        lambda: database.list_collection_names(
+            filter={"name": {"$not": {"$regex": r"^system\."}}}, maxTimeMS=conn.max_time_ms
         )
     )
     if not names:
         return None
     pipeline: list[dict[str, Any]] = [{"$indexStats": {}}, {"$limit": 1}]
     try:
-        retry(
-            lambda: list(client[db][names[0]].aggregate(pipeline, maxTimeMS=settings.max_time_ms))
-        )
+        retry(lambda: list(database[names[0]].aggregate(pipeline, maxTimeMS=conn.max_time_ms)))
     except OperationFailure:
         return False
     return True

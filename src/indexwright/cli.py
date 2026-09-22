@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from indexwright.doctor import Check
-    from indexwright.mongo import Client
+    from indexwright.mongo import Connection
 
 EXIT_OK = 0
 EXIT_FINDINGS = 1
@@ -68,7 +68,7 @@ def doctor(ctx: typer.Context, uri: Uri, db: Db = None) -> None:
     """Check connectivity, version, privileges, profiler and $indexStats."""
     settings = Settings(uri=uri, timeout=ctx.obj, db=db)
     started = time.monotonic()
-    checks = _with_client(settings, lambda client: run_checks(client, settings))
+    checks = _with_connection(settings, run_checks)
     stdout.print(_checks_table(checks))
     failed = sum(c.status == "fail" for c in checks)
     warned = sum(c.status == "warn" for c in checks)
@@ -79,21 +79,21 @@ def doctor(ctx: typer.Context, uri: Uri, db: Db = None) -> None:
     raise typer.Exit(EXIT_FINDINGS if failed else EXIT_OK)
 
 
-def _with_client(settings: Settings, fn: Callable[[Client], T]) -> T:
+def _with_connection(settings: Settings, fn: Callable[[Connection], T]) -> T:
     try:
-        client = connect(settings)
+        conn = connect(settings)
     except ConnectError as exc:
         _fail(str(exc), EXIT_USAGE)
-    try:
-        return fn(client)
     except WriteAccessError as exc:
         _fail(f"refusing to continue, {exc}", EXIT_WRITE_ACCESS)
+    try:
+        return fn(conn)
     except PyMongoError as exc:
         _fail(f"{type(exc).__name__}: {exc}", EXIT_USAGE)
     except KeyboardInterrupt:
         _fail("interrupted", EXIT_INTERRUPTED)
     finally:
-        client.close()
+        conn.close()
 
 
 def _fail(message: str, code: int) -> NoReturn:
