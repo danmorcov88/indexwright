@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import io
 import logging
 import re
 import sys
 import time
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Generic, NoReturn, TypeVar
 
 import typer
@@ -18,6 +20,7 @@ from indexwright.analysis import analyze as run_analysis
 from indexwright.doctor import run_checks
 from indexwright.indexes import inventory
 from indexwright.mongo import ConnectError, Settings, WriteAccessError, connect, mask_uri
+from indexwright.report import Source, render_json, render_markdown, render_table
 from indexwright.rules.esr import format_keys
 from indexwright.shape import compact
 from indexwright.source import LogFormatError, read_all, read_log
@@ -27,7 +30,7 @@ if TYPE_CHECKING:
 
     from indexwright.analysis import Analysis
     from indexwright.doctor import Check
-    from indexwright.model import CollectionIndexes, Entry, Finding, Shape, ShapeStats
+    from indexwright.model import CollectionIndexes, Entry, ShapeStats
     from indexwright.mongo import Connection
 
 EXIT_OK = 0
@@ -43,13 +46,6 @@ stdout = Console()
 stderr = Console(stderr=True)
 
 STATUS_STYLE = {"ok": "green", "warn": "yellow", "fail": "red"}
-SEVERITY_STYLE = {
-    "critical": "bold red",
-    "high": "red",
-    "medium": "yellow",
-    "low": "cyan",
-    "info": "dim",
-}
 
 
 def _print_version(value: bool) -> None:
@@ -91,6 +87,8 @@ MaxExplains = Annotated[int, typer.Option("--max-explains", help="Max explain ca
 UnusedDays = Annotated[
     int, typer.Option("--unused-days", help="Report indexes with no use for this many days")
 ]
+Format = Annotated[str, typer.Option("--format", help="table, json or md")]
+Out = Annotated[Path | None, typer.Option("--out", help="Write the report to this file")]
 
 
 @app.command()
@@ -185,8 +183,12 @@ def analyze(
     limit: Limit = 50_000,
     max_explains: MaxExplains = 200,
     unused_days: UnusedDays = 30,
+    format: Format = "table",
+    out: Out = None,
 ) -> None:
     """Find slow query shapes and recommend indexes. Exit 1 when high findings exist."""
+    if format not in ("table", "json", "md"):
+        raise typer.BadParameter("use table, json or md")
     settings = _settings(ctx, uri, db, log)
     cutoff = datetime.now(UTC) - _parse_since(since)
     started = time.monotonic()
@@ -205,21 +207,10 @@ def analyze(
     for check in result.checks:
         if check.status == "warn":
             stderr.print(f"warning: {check.name}: {check.detail}", soft_wrap=True)
-    shapes = {s.shape.fingerprint: s.shape for s in result.shapes}
-    stdout.print(_findings_table(result.findings, shapes))
-    statements = result.create_index_statements()
-    if statements:
-        stdout.print()
-        stdout.print("[bold]Recommended indexes[/bold]")
-        for rec, shape_ids in statements:
-            served = ", ".join(sid[:10] for sid in shape_ids)
-            stdout.print(f"  {rec.statement}   [dim]# shapes {served}[/dim]", soft_wrap=True)
-    drops = result.drop_index_statements()
-    if drops:
-        stdout.print()
-        stdout.print("[bold]Indexes to drop[/bold] (verify usage on every member first)")
-        for rec in drops:
-            stdout.print(f"  {rec.statement}", soft_wrap=True)
+    source = Source(
+        "log" if log else "profiler", cutoff, None if log else [db] if db else None, log
+    )
+    _emit(result, source, format, out)
     stderr.print(
         f"analyze: {result.entries_read} entries read, {len(result.shapes)} shapes, "
         f"{result.explains} explains, {len(result.findings)} findings, "
@@ -227,6 +218,27 @@ def analyze(
         f"{time.monotonic() - started:.1f}s"
     )
     raise typer.Exit(EXIT_FINDINGS if result.actionable else EXIT_OK)
+
+
+def _emit(result: Analysis, source: Source, format: str, out: Path | None) -> None:
+    if format == "table" and out is None:
+        for part in render_table(result):
+            stdout.print(part, soft_wrap=True)
+        return
+    if format == "json":
+        text = render_json(result, source)
+    elif format == "md":
+        text = render_markdown(result, source)
+    else:
+        capture = Console(record=True, width=120, file=io.StringIO())
+        for part in render_table(result):
+            capture.print(part)
+        text = capture.export_text()
+    if out is None:
+        sys.stdout.write(text)
+        return
+    out.write_text(text, encoding="utf-8")
+    stderr.print(f"report written to {out}")
 
 
 def _members_note(reached: int, total: int, unreachable: list[str]) -> str:
@@ -279,23 +291,6 @@ def _indexes_table(collections: list[CollectionIndexes]) -> Table:
             ops = str(usage.ops) if usage else "n/a"
             since = usage.since.strftime("%Y-%m-%d") if usage else ""
             table.add_row(coll.ns, index.name, format_keys(index.keys), flags, ops, since)
-    return table
-
-
-def _findings_table(findings: list[Finding], shapes: dict[str, Shape]) -> Table:
-    table = Table(title="findings", expand=True)
-    table.add_column("severity", no_wrap=True)
-    table.add_column("rule", no_wrap=True)
-    table.add_column("ns", no_wrap=True)
-    table.add_column("shape", ratio=1, overflow="fold")
-    table.add_column("message", ratio=2, overflow="fold")
-    for f in findings:
-        style = SEVERITY_STYLE[f.severity]
-        shape = shapes.get(f.shape_id)
-        label = f"{shape.op} {compact(shape)}" if shape else f"index {f.evidence.get('index', '')}"
-        table.add_row(f"[{style}]{f.severity}[/{style}]", f.rule, f.ns, label, f.message)
-    if not findings:
-        table.add_row("", "", "", "", "no findings")
     return table
 
 

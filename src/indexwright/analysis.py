@@ -39,21 +39,23 @@ class Analysis:
         return any(f.severity in ("critical", "high") for f in self.findings)
 
     def create_index_statements(self) -> list[tuple[Recommendation, list[str]]]:
-        grouped: dict[str, tuple[Recommendation, list[str]]] = {}
-        for finding in self.findings:
-            rec = finding.recommendation
-            if rec is None or rec.kind != "create_index":
-                continue
-            grouped.setdefault(rec.statement, (rec, []))[1].append(finding.shape_id)
-        return list(grouped.values())
+        return self._grouped("create_index")
 
     def drop_index_statements(self) -> list[Recommendation]:
-        seen: dict[str, Recommendation] = {}
+        return [rec for rec, _ in self._grouped("drop_index")]
+
+    def rewrite_statements(self) -> list[tuple[Recommendation, list[str]]]:
+        return self._grouped("rewrite")
+
+    def _grouped(self, kind: str) -> list[tuple[Recommendation, list[str]]]:
+        grouped: dict[tuple[str, str], tuple[Recommendation, list[str]]] = {}
         for finding in self.findings:
             rec = finding.recommendation
-            if rec is not None and rec.kind == "drop_index":
-                seen.setdefault(rec.statement, rec)
-        return list(seen.values())
+            if rec is None or rec.kind != kind:
+                continue
+            key = (rec.ns, rec.statement)
+            grouped.setdefault(key, (rec, []))[1].append(finding.shape_id)
+        return list(grouped.values())
 
 
 def analyze(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,8 @@ from indexwright.source import read_all
 from tests.integration.workload import EXPECTED_FINDINGS, EXPECTED_SHAPES
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from tests.integration.conftest import Mongo
 
 runner = CliRunner()
@@ -62,3 +65,33 @@ def test_analyze_command(mongo: Mongo, workload: int) -> None:
     assert 'db.orders.dropIndex("created_1")' in result.output
     assert "analyze:" in result.output and "20 shapes, 20 explains" in result.output
     assert mongo.opcounters() == before
+
+
+def test_analyze_json_report_to_file(mongo: Mongo, workload: int, tmp_path: Path) -> None:
+    before = mongo.opcounters()
+    out = tmp_path / "report.json"
+    args = ["analyze", "--uri", mongo.ro_uri, "--db", "app", "--format", "json", "--out", str(out)]
+    result = runner.invoke(app, args)
+    assert result.exit_code in (EXIT_OK, EXIT_FINDINGS), result.output
+    assert "report written to" in result.output and "createIndex" not in result.output
+    doc = json.loads(out.read_text(encoding="utf-8"))
+    assert doc["schema_version"] == 1
+    assert doc["summary"]["shapes"] == len(EXPECTED_SHAPES)
+    assert doc["source"] == {
+        "kind": "profiler",
+        "since": doc["source"]["since"],
+        "databases": ["app"],
+        "files": None,
+    }
+    assert {(s["op"], s["shape"]) for s in doc["shapes"]} == EXPECTED_SHAPES
+    assert "example.com" not in out.read_text(encoding="utf-8")
+    assert mongo.opcounters() == before
+
+
+def test_analyze_markdown_report(mongo: Mongo, workload: int) -> None:
+    result = runner.invoke(app, ["analyze", "--uri", mongo.ro_uri, "--db", "app", "--format", "md"])
+    assert result.exit_code in (EXIT_OK, EXIT_FINDINGS), result.output
+    assert "# indexwright report" in result.output
+    assert "## Recommended indexes" in result.output
+    assert "db.customers.createIndex({email: 1}" in result.output
+    assert "## Query rewrites" in result.output

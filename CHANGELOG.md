@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- `analyze --format json|md --out FILE`: a stable JSON report (schema version 1, see `docs/report-schema.md`) and a short Markdown report.
 - `--log`: read mongod JSON log files (plain, `.gz`, `*` patterns) instead of the profiler; works offline without `--uri`.
 - Rules `unanchored_regex`, `negation_predicate`, `large_in`, `lookup_no_index`.
 - `indexes` command: inventory with flags, usage and member coverage. `analyze --unused-days` and an "Indexes to drop" list.
