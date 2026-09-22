@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Rules `collscan`, `sort_in_memory`, `docs_examined_ratio`, `low_selectivity_index`. Each shape gets at most one owner rule, so one bad query yields one recommendation.
 - ESR index builder: equality fields, then sort fields in sort order, then range fields; one candidate per `$or` branch; skipped when an existing index already covers the key sequence.
 - `explain` runner: one `queryPlanner` explain per shape, throttled to 5 per second and 200 per run, parsed into plan stages, index names and residual filter fields. Understands classic, SBE and sharded plans.
 - `shapes` command: query shapes from `system.profile` with count, p50, p99 and documents examined per document returned.
