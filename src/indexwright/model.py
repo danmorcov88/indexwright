@@ -43,12 +43,16 @@ class ShapeMeta:
     in_size: int = 0
     unanchored_regex: frozenset[str] = frozenset()
     projection_present: bool = False
+    # count, distinct, $group, skip: returned documents are not the matched documents, so
+    # ratios over nreturned say nothing about the index.
+    output_reduced: bool = False
 
     def merge(self, other: ShapeMeta) -> ShapeMeta:
         return ShapeMeta(
             max(self.in_size, other.in_size),
             self.unanchored_regex | other.unanchored_regex,
             self.projection_present or other.projection_present,
+            self.output_reduced or other.output_reduced,
         )
 
 

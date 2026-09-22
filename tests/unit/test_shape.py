@@ -40,6 +40,7 @@ def test_golden(case: dict[str, Any]) -> None:
     assert meta.in_size == expected["in_size"]
     assert sorted(meta.unanchored_regex) == expected["unanchored_regex"]
     assert meta.projection_present == expected["projection_present"]
+    assert meta.output_reduced == expected.get("output_reduced", False)
     assert shape.ns == "app.orders"
     assert shape.op == case["op"]
 

@@ -15,7 +15,12 @@ def check(
     stats: ShapeStats, explain: ExplainResult | None, indexes: list[IndexInfo]
 ) -> list[Finding]:
     plan = usable(explain)
-    if plan is None or not stats.returned_known or not plan.fetch_filter_fields:
+    if (
+        plan is None
+        or not stats.returned_known
+        or stats.meta.output_reduced
+        or not plan.fetch_filter_fields
+    ):
         return []
     if is_collscan(stats, explain) or sorts_in_memory(stats, explain):
         return []

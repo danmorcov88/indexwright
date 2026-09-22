@@ -10,7 +10,9 @@ more than 100 times, `high` when p99 is above 100 ms or the shape ran more than 
 
 Rules own shapes in this order, so one bad shape gets one finding: a collection scan is always
 reported as `collscan`; an in-memory sort as `sort_in_memory`; the two ratio rules only look at
-what is left.
+what is left. The ratio rules also skip shapes whose output is not the set of matched documents
+(`count`, `distinct`, `$group`, `$count`, `skip`, ...): there, "documents examined per document
+returned" says nothing about the index.
 
 ## The ESR builder
 

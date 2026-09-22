@@ -32,8 +32,10 @@ A shape is a query with every value replaced by `?`, so that `{status: "new", n:
 `{n: {$gt: 9}, status: "done"}` are the same shape. Keys are sorted, `$or`/`$and` clause order is
 ignored, sort order is kept because it matters for indexes.
 
-Two things are recorded next to the shape instead of inside it, because they change per execution:
-the largest `$in` list seen and which `$regex` fields were not anchored with `^`.
+A few things are recorded next to the shape instead of inside it, because they change per
+execution: the largest `$in` list seen, which `$regex` fields were not anchored with `^`, whether a
+projection was present, and whether the operation reduces its output (`count`, `distinct`,
+`$group`, `skip`).
 
 Aggregation pipelines keep the first `$match` and `$sort` that come before any stage that changes
 documents (`$group`, `$project`, `$unwind`, `$lookup`, ...). Only those can use an index.

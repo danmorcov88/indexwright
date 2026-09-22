@@ -1348,7 +1348,8 @@
       "pipeline": null,
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     },
     "differs_from": "find_equality"
   },
@@ -1364,7 +1365,8 @@
       "pipeline": null,
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
   },
   {
@@ -1389,8 +1391,55 @@
       "pipeline": null,
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
+  },
+  {
+    "name": "find_skip_reduces_output",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": "new"
+      },
+      "skip": 100,
+      "limit": 20
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false,
+      "output_reduced": true
+    },
+    "same_as": "find_equality"
+  },
+  {
+    "name": "find_limit_alone_does_not_reduce_output",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": "new"
+      },
+      "limit": 20
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_equality"
   },
   {
     "name": "update_q",
@@ -1594,7 +1643,8 @@
       ],
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
   },
   {
@@ -1648,6 +1698,43 @@
     "differs_from": "aggregate_match_sort_group"
   },
   {
+    "name": "aggregate_unwind_does_not_reduce_output",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$match": {
+            "status": "new"
+          }
+        },
+        {
+          "$unwind": "$tags"
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": [
+        {
+          "$match": {
+            "status": "?"
+          }
+        },
+        {
+          "$unwind": "?"
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
     "name": "aggregate_match_after_group_is_not_indexable",
     "op": "aggregate",
     "command": {
@@ -1690,7 +1777,8 @@
       ],
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
   },
   {
@@ -1968,7 +2056,8 @@
       ],
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
   },
   {
@@ -2008,7 +2097,8 @@
       ],
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
   },
   {
@@ -2071,7 +2161,8 @@
       ],
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
   },
   {
@@ -2104,7 +2195,8 @@
       ],
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
   },
   {
@@ -2209,7 +2301,8 @@
       ],
       "in_size": 0,
       "unanchored_regex": [],
-      "projection_present": false
+      "projection_present": false,
+      "output_reduced": true
     }
   },
   {

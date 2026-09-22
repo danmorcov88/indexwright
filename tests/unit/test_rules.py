@@ -200,6 +200,22 @@ def test_ratio_rules_need_a_known_returned_count() -> None:
     assert [f.rule for f in run_rules(unknown, COLLSCAN, [])] == ["collscan"]
 
 
+def test_ratio_rules_skip_shapes_that_reduce_output() -> None:
+    plan = ExplainResult(("FETCH", "IXSCAN"), ("created_1_email_1",))
+    distinct = _stats({"created": {"$gte": 1}}, op="distinct", keys=5000, returned=5)
+    assert run_rules(distinct, plan, [CREATED_EMAIL]) == []
+    command = {
+        "aggregate": "orders",
+        "pipeline": [{"$match": {"status": "new"}}, {"$group": {"_id": "$customer_id"}}],
+    }
+    shape, meta = normalize("app.orders", "aggregate", command)
+    base = _stats({"status": "new"}, keys=1000, returned=5)
+    grouped = ShapeStats(**{**base.__dict__, "shape": shape, "meta": meta})
+    assert run_rules(grouped, IXSCAN, [STATUS_1]) == []
+    assert run_rules(grouped, IXSCAN_RESIDUAL, [STATUS_1]) == []
+    assert [f.rule for f in run_rules(grouped, COLLSCAN, [])] == ["collscan"]
+
+
 def test_good_queries_produce_nothing() -> None:
     assert run_rules(_stats({"customer_id": 7}), IXSCAN, [STATUS_1]) == []
     assert run_rules(_stats({"_id": 1}), ExplainResult(("IDHACK",)), []) == []

@@ -13,6 +13,9 @@ LOGICAL = frozenset({"$and", "$or", "$nor"})
 LIST_OPERATORS = frozenset({"$in", "$nin", "$all"})
 # Stages that leave documents unchanged, so a $match or $sort after them can still use an index.
 TRANSPARENT_STAGES = frozenset({"$match", "$sort", "$limit", "$skip"})
+REDUCING_STAGES = frozenset(
+    {"$group", "$count", "$facet", "$bucket", "$bucketAuto", "$sortByCount", "$skip", "$sample"}
+)
 PLACEHOLDER = "?"
 
 
@@ -21,6 +24,7 @@ class _Meta:
         self.in_size = 0
         self.unanchored: set[str] = set()
         self.projection = False
+        self.reduced = False
 
     def regex(self, field: str, pattern: Any) -> None:
         text = pattern.pattern if isinstance(pattern, Regex | re.Pattern) else str(pattern)
@@ -28,7 +32,7 @@ class _Meta:
             self.unanchored.add(field)
 
     def frozen(self) -> ShapeMeta:
-        return ShapeMeta(self.in_size, frozenset(self.unanchored), self.projection)
+        return ShapeMeta(self.in_size, frozenset(self.unanchored), self.projection, self.reduced)
 
 
 def normalize(ns: str, op: str, command: dict[str, Any]) -> tuple[Shape, ShapeMeta]:
@@ -37,11 +41,13 @@ def normalize(ns: str, op: str, command: dict[str, Any]) -> tuple[Shape, ShapeMe
     if op == "aggregate":
         pipeline = [_stage(stage, meta) for stage in command.get("pipeline", [])]
         filter_, sort = _indexable_part(pipeline)
+        meta.reduced = any(next(iter(stage)) in REDUCING_STAGES for stage in pipeline)
     else:
         raw_filter, raw_sort, projection = _extract(op, command)
         filter_ = _filter(raw_filter, meta)
         sort = _sort(raw_sort)
         meta.projection = bool(projection)
+        meta.reduced = op in ("count", "distinct") or bool(command.get("skip"))
     canonical = _canonical({"op": op, "filter": filter_, "sort": sort, "pipeline": pipeline})
     fingerprint = hashlib.sha1(canonical.encode()).hexdigest()
     return Shape(ns, op, filter_, sort, pipeline, fingerprint), meta.frozen()
