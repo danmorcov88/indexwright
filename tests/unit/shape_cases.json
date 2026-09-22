@@ -1,0 +1,2224 @@
+[
+  {
+    "name": "find_equality",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": "new"
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_key_order_does_not_matter",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "b": 1,
+        "a": 2
+      }
+    },
+    "expected": {
+      "filter": {
+        "a": "?",
+        "b": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_key_order_reference",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "a": 2,
+        "b": 1
+      }
+    },
+    "expected": {
+      "filter": {
+        "a": "?",
+        "b": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_key_order_does_not_matter"
+  },
+  {
+    "name": "find_literal_types_do_not_matter",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": 42
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_equality"
+  },
+  {
+    "name": "find_null_literal",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": null
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_equality"
+  },
+  {
+    "name": "find_date_literal",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": {
+          "$date": "2026-01-01T00:00:00Z"
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_equality"
+  },
+  {
+    "name": "find_objectid_literal",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": {
+          "$oid": "65f1c2d3e4f5a6b7c8d9e0f1"
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_equality"
+  },
+  {
+    "name": "find_range",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "n": {
+          "$gt": 5,
+          "$lt": 10
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "n": {
+          "$gt": "?",
+          "$lt": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_range_operator_order",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "n": {
+          "$lt": 10,
+          "$gt": 5
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "n": {
+          "$gt": "?",
+          "$lt": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_range"
+  },
+  {
+    "name": "find_gte_lte",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "created": {
+          "$gte": {
+            "$date": "2026-01-01T00:00:00Z"
+          },
+          "$lte": {
+            "$date": "2026-02-01T00:00:00Z"
+          }
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "created": {
+          "$gte": "?",
+          "$lte": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_in",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": {
+          "$in": [
+            "a",
+            "b",
+            "c"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": {
+          "$in": [
+            "?"
+          ]
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 3,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_in_size_is_metadata_not_shape",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": {
+          "$in": [
+            "a",
+            "b",
+            "c",
+            "d",
+            "e"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": {
+          "$in": [
+            "?"
+          ]
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 5,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_in"
+  },
+  {
+    "name": "find_in_empty",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": {
+          "$in": []
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": {
+          "$in": [
+            "?"
+          ]
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_in"
+  },
+  {
+    "name": "find_nin",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": {
+          "$nin": [
+            "a",
+            "b"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": {
+          "$nin": [
+            "?"
+          ]
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_all",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "tags": {
+          "$all": [
+            "a",
+            "b"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "tags": {
+          "$all": [
+            "?"
+          ]
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_array_equality",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "tags": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    "expected": {
+      "filter": {
+        "tags": [
+          "?"
+        ]
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_empty_array_equality",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "tags": []
+      }
+    },
+    "expected": {
+      "filter": {
+        "tags": [
+          "?"
+        ]
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_array_equality"
+  },
+  {
+    "name": "find_regex_unanchored",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "name": {
+          "$regex": "foo",
+          "$options": "i"
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "name": {
+          "$regex": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [
+        "name"
+      ],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_regex_anchored",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "name": {
+          "$regex": "^foo"
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "name": {
+          "$regex": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_regex_unanchored"
+  },
+  {
+    "name": "find_regex_native_type",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "name": {
+          "$regularExpression": {
+            "pattern": "bar",
+            "options": "i"
+          }
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "name": {
+          "$regex": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [
+        "name"
+      ],
+      "projection_present": false
+    },
+    "same_as": "find_regex_unanchored"
+  },
+  {
+    "name": "find_regex_native_anchored",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "name": {
+          "$regularExpression": {
+            "pattern": "^bar",
+            "options": ""
+          }
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "name": {
+          "$regex": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_regex_unanchored"
+  },
+  {
+    "name": "find_two_regex_fields",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "a": {
+          "$regex": "^x"
+        },
+        "b": {
+          "$regex": "y"
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "a": {
+          "$regex": "?"
+        },
+        "b": {
+          "$regex": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [
+        "b"
+      ],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_not_regex",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "name": {
+          "$not": {
+            "$regex": "foo"
+          }
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "name": {
+          "$not": {
+            "$regex": "?"
+          }
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [
+        "name"
+      ],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_not_operator",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "n": {
+          "$not": {
+            "$gt": 5
+          }
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "n": {
+          "$not": {
+            "$gt": "?"
+          }
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_exists_false_is_kept",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "deleted": {
+          "$exists": false
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "deleted": {
+          "$exists": false
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_exists_true_is_kept",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "deleted": {
+          "$exists": true
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "deleted": {
+          "$exists": true
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "differs_from": "find_exists_false_is_kept"
+  },
+  {
+    "name": "find_ne",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": {
+          "$ne": "x"
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": {
+          "$ne": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_subdocument_equality_is_literal",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "address": {
+          "city": "x",
+          "zip": 1
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "address": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_dotted_path",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "address.city": "x"
+      }
+    },
+    "expected": {
+      "filter": {
+        "address.city": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_elem_match",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "items": {
+          "$elemMatch": {
+            "sku": "x",
+            "qty": {
+              "$gt": 1
+            }
+          }
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "items": {
+          "$elemMatch": {
+            "qty": {
+              "$gt": "?"
+            },
+            "sku": "?"
+          }
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_or",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "$or": [
+          {
+            "a": 1
+          },
+          {
+            "b": 2
+          }
+        ]
+      }
+    },
+    "expected": {
+      "filter": {
+        "$or": [
+          {
+            "a": "?"
+          },
+          {
+            "b": "?"
+          }
+        ]
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_or_clause_order_does_not_matter",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "$or": [
+          {
+            "b": 2
+          },
+          {
+            "a": 1
+          }
+        ]
+      }
+    },
+    "expected": {
+      "filter": {
+        "$or": [
+          {
+            "a": "?"
+          },
+          {
+            "b": "?"
+          }
+        ]
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_or"
+  },
+  {
+    "name": "find_and_with_nested_or",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "$and": [
+          {
+            "status": "x"
+          },
+          {
+            "$or": [
+              {
+                "a": 1
+              },
+              {
+                "b": {
+                  "$in": [
+                    1,
+                    2,
+                    3,
+                    4
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "expected": {
+      "filter": {
+        "$and": [
+          {
+            "$or": [
+              {
+                "a": "?"
+              },
+              {
+                "b": {
+                  "$in": [
+                    "?"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "status": "?"
+          }
+        ]
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 4,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_nor",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "$nor": [
+          {
+            "a": 1
+          }
+        ]
+      }
+    },
+    "expected": {
+      "filter": {
+        "$nor": [
+          {
+            "a": "?"
+          }
+        ]
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_expr",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "$expr": {
+          "$gt": [
+            "$a",
+            "$b"
+          ]
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "$expr": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_where",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "$where": "this.a > 1"
+      }
+    },
+    "expected": {
+      "filter": {
+        "$where": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_text",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "$text": {
+          "$search": "coffee"
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "$text": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_geo",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "loc": {
+          "$geoWithin": {
+            "$centerSphere": [
+              [
+                0,
+                0
+              ],
+              1
+            ]
+          }
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "loc": {
+          "$geoWithin": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_type",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "a": {
+          "$type": "string"
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "a": {
+          "$type": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_size",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "tags": {
+          "$size": 3
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "tags": {
+          "$size": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_mod",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "n": {
+          "$mod": [
+            4,
+            0
+          ]
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "n": {
+          "$mod": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_comment_is_dropped",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": "new",
+        "$comment": "why"
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_equality"
+  },
+  {
+    "name": "find_with_sort",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": "new"
+      },
+      "sort": {
+        "created": -1
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [
+        [
+          "created",
+          -1
+        ]
+      ],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "differs_from": "find_equality"
+  },
+  {
+    "name": "find_sort_field_order_matters",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {},
+      "sort": {
+        "a": 1,
+        "b": -1
+      }
+    },
+    "expected": {
+      "filter": {},
+      "sort": [
+        [
+          "a",
+          1
+        ],
+        [
+          "b",
+          -1
+        ]
+      ],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_sort_field_order_reversed",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {},
+      "sort": {
+        "b": -1,
+        "a": 1
+      }
+    },
+    "expected": {
+      "filter": {},
+      "sort": [
+        [
+          "b",
+          -1
+        ],
+        [
+          "a",
+          1
+        ]
+      ],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "differs_from": "find_sort_field_order_matters"
+  },
+  {
+    "name": "find_projection_is_metadata",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": "new"
+      },
+      "projection": {
+        "n": 1
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": true
+    },
+    "same_as": "find_equality"
+  },
+  {
+    "name": "find_empty_filter",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_missing_filter",
+    "op": "find",
+    "command": {
+      "find": "orders"
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_empty_filter"
+  },
+  {
+    "name": "find_limit_and_batch_size_are_ignored",
+    "op": "find",
+    "command": {
+      "find": "orders",
+      "filter": {
+        "status": "new"
+      },
+      "limit": 30,
+      "batchSize": 10,
+      "singleBatch": false
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "same_as": "find_equality"
+  },
+  {
+    "name": "count_query",
+    "op": "count",
+    "command": {
+      "count": "orders",
+      "query": {
+        "status": "new"
+      }
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "differs_from": "find_equality"
+  },
+  {
+    "name": "count_without_query",
+    "op": "count",
+    "command": {
+      "count": "orders"
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "distinct_query",
+    "op": "distinct",
+    "command": {
+      "distinct": "orders",
+      "key": "status",
+      "query": {
+        "n": {
+          "$lt": 50
+        }
+      }
+    },
+    "expected": {
+      "filter": {
+        "n": {
+          "$lt": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "update_q",
+    "op": "update",
+    "command": {
+      "q": {
+        "status": "new"
+      },
+      "u": {
+        "$set": {
+          "x": 1
+        }
+      },
+      "multi": false,
+      "upsert": false
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "differs_from": "find_equality"
+  },
+  {
+    "name": "update_q_with_in",
+    "op": "update",
+    "command": {
+      "q": {
+        "_id": {
+          "$in": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        }
+      },
+      "u": {
+        "$set": {
+          "x": 1
+        }
+      },
+      "multi": true
+    },
+    "expected": {
+      "filter": {
+        "_id": {
+          "$in": [
+            "?"
+          ]
+        }
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 6,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "delete_q",
+    "op": "delete",
+    "command": {
+      "q": {
+        "n": 199
+      },
+      "limit": 1
+    },
+    "expected": {
+      "filter": {
+        "n": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_and_modify_query_and_sort",
+    "op": "findAndModify",
+    "command": {
+      "findAndModify": "orders",
+      "query": {
+        "status": "done"
+      },
+      "sort": {
+        "n": 1
+      },
+      "update": {
+        "$set": {
+          "y": 1
+        }
+      },
+      "new": false
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [
+        [
+          "n",
+          1
+        ]
+      ],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "find_and_modify_fields_is_projection",
+    "op": "findAndModify",
+    "command": {
+      "findAndModify": "orders",
+      "query": {
+        "status": "done"
+      },
+      "fields": {
+        "n": 1
+      },
+      "remove": true
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": null,
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": true
+    }
+  },
+  {
+    "name": "aggregate_match_sort_group",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$match": {
+            "status": "new"
+          }
+        },
+        {
+          "$sort": {
+            "n": 1
+          }
+        },
+        {
+          "$group": {
+            "_id": "$status",
+            "c": {
+              "$sum": 1
+            }
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [
+        [
+          "n",
+          1
+        ]
+      ],
+      "pipeline": [
+        {
+          "$match": {
+            "status": "?"
+          }
+        },
+        {
+          "$sort": [
+            [
+              "n",
+              1
+            ]
+          ]
+        },
+        {
+          "$group": {
+            "_id": "$status"
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_sort_before_match",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$sort": {
+            "n": 1
+          }
+        },
+        {
+          "$match": {
+            "status": "new"
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [
+        [
+          "n",
+          1
+        ]
+      ],
+      "pipeline": [
+        {
+          "$sort": [
+            [
+              "n",
+              1
+            ]
+          ]
+        },
+        {
+          "$match": {
+            "status": "?"
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    },
+    "differs_from": "aggregate_match_sort_group"
+  },
+  {
+    "name": "aggregate_match_after_group_is_not_indexable",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$group": {
+            "_id": "$status",
+            "c": {
+              "$sum": 1
+            }
+          }
+        },
+        {
+          "$match": {
+            "c": {
+              "$gt": 1
+            }
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": [
+        {
+          "$group": {
+            "_id": "$status"
+          }
+        },
+        {
+          "$match": {
+            "c": {
+              "$gt": "?"
+            }
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_match_after_project_is_not_indexable",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$project": {
+            "a": 1
+          }
+        },
+        {
+          "$match": {
+            "a": 1
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": [
+        {
+          "$project": "?"
+        },
+        {
+          "$match": {
+            "a": "?"
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_match_after_unwind_is_not_indexable",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$unwind": "$tags"
+        },
+        {
+          "$match": {
+            "tags": "x"
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": [
+        {
+          "$unwind": "?"
+        },
+        {
+          "$match": {
+            "tags": "?"
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_limit_does_not_block_match",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$limit": 10
+        },
+        {
+          "$match": {
+            "status": "new"
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": [
+        {
+          "$limit": "?"
+        },
+        {
+          "$match": {
+            "status": "?"
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_only_first_match_counts",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$match": {
+            "status": "new"
+          }
+        },
+        {
+          "$match": {
+            "n": {
+              "$gt": 1
+            }
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": [
+        {
+          "$match": {
+            "status": "?"
+          }
+        },
+        {
+          "$match": {
+            "n": {
+              "$gt": "?"
+            }
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_lookup_simple",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$match": {
+            "status": "new"
+          }
+        },
+        {
+          "$lookup": {
+            "from": "customers",
+            "localField": "customer_id",
+            "foreignField": "_id",
+            "as": "customer"
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": [
+        {
+          "$match": {
+            "status": "?"
+          }
+        },
+        {
+          "$lookup": {
+            "foreignField": "_id",
+            "from": "customers",
+            "localField": "customer_id"
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_lookup_pipeline_form",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "customers",
+            "let": {
+              "cid": "$customer_id"
+            },
+            "pipeline": [
+              {
+                "$match": {
+                  "$expr": {
+                    "$eq": [
+                      "$_id",
+                      "$$cid"
+                    ]
+                  }
+                }
+              }
+            ],
+            "as": "customer"
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": [
+        {
+          "$lookup": {
+            "from": "customers",
+            "pipeline": "?"
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_group_id_null",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$group": {
+            "_id": null,
+            "total": {
+              "$sum": "$total"
+            }
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": [
+        {
+          "$group": {
+            "_id": null
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_group_id_compound_keeps_field_refs",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$group": {
+            "_id": {
+              "s": "$status",
+              "d": {
+                "$dateToString": {
+                  "format": "%Y",
+                  "date": "$created"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": [
+        {
+          "$group": {
+            "_id": {
+              "d": "?",
+              "s": "$status"
+            }
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_other_stages_keep_name_only",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$match": {
+            "status": "new"
+          }
+        },
+        {
+          "$unwind": "$tags"
+        },
+        {
+          "$skip": 5
+        },
+        {
+          "$limit": 10
+        },
+        {
+          "$project": {
+            "a": 1
+          }
+        },
+        {
+          "$count": "n"
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": [
+        {
+          "$match": {
+            "status": "?"
+          }
+        },
+        {
+          "$unwind": "?"
+        },
+        {
+          "$skip": "?"
+        },
+        {
+          "$limit": "?"
+        },
+        {
+          "$project": "?"
+        },
+        {
+          "$count": "?"
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_facet",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$facet": {
+            "a": [
+              {
+                "$match": {
+                  "x": 1
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": [
+        {
+          "$facet": "?"
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_empty_pipeline",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {},
+      "sort": [],
+      "pipeline": [],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_match_in_size",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$match": {
+            "status": {
+              "$in": [
+                "a",
+                "b"
+              ]
+            }
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": {
+          "$in": [
+            "?"
+          ]
+        }
+      },
+      "sort": [],
+      "pipeline": [
+        {
+          "$match": {
+            "status": {
+              "$in": [
+                "?"
+              ]
+            }
+          }
+        }
+      ],
+      "in_size": 2,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_count_documents_shape",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$match": {
+            "status": "new"
+          }
+        },
+        {
+          "$group": {
+            "_id": 1,
+            "n": {
+              "$sum": 1
+            }
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "status": "?"
+      },
+      "sort": [],
+      "pipeline": [
+        {
+          "$match": {
+            "status": "?"
+          }
+        },
+        {
+          "$group": {
+            "_id": "?"
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [],
+      "projection_present": false
+    }
+  },
+  {
+    "name": "aggregate_match_regex",
+    "op": "aggregate",
+    "command": {
+      "aggregate": "orders",
+      "pipeline": [
+        {
+          "$match": {
+            "name": {
+              "$regex": "x"
+            }
+          }
+        }
+      ],
+      "cursor": {}
+    },
+    "expected": {
+      "filter": {
+        "name": {
+          "$regex": "?"
+        }
+      },
+      "sort": [],
+      "pipeline": [
+        {
+          "$match": {
+            "name": {
+              "$regex": "?"
+            }
+          }
+        }
+      ],
+      "in_size": 0,
+      "unanchored_regex": [
+        "name"
+      ],
+      "projection_present": false
+    }
+  }
+]
