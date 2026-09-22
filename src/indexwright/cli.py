@@ -97,7 +97,7 @@ def _with_client(settings: Settings, fn: Callable[[Client], T]) -> T:
 
 
 def _fail(message: str, code: int) -> NoReturn:
-    stderr.print(f"[red]error:[/red] {mask_uri(message)}", highlight=False)
+    stderr.print(f"[red]error:[/red] {mask_uri(message)}", highlight=False, soft_wrap=True)
     raise typer.Exit(code)
 
 
