@@ -1,0 +1,82 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "$and": [
+    {
+     "created": {
+      "$lt": {
+       "$date": "2026-06-04T00:00:00Z"
+      }
+     }
+    },
+    {
+     "created": {
+      "$gte": {
+       "$date": "2026-06-01T00:00:00Z"
+      }
+     }
+    }
+   ]
+  },
+  "indexFilterSet": false,
+  "queryHash": "06FB00D1",
+  "planCacheShapeHash": "06FB00D1",
+  "planCacheKey": "85962C06",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "stage": "FETCH",
+   "nss": "app.orders",
+   "inputStage": {
+    "stage": "IXSCAN",
+    "nss": "app.orders",
+    "keyPattern": {
+     "created": 1,
+     "email": 1
+    },
+    "indexName": "created_1_email_1",
+    "isMultiKey": false,
+    "multiKeyPaths": {
+     "created": [],
+     "email": []
+    },
+    "isUnique": false,
+    "isSparse": false,
+    "isPartial": false,
+    "indexVersion": 2,
+    "direction": "forward",
+    "indexBounds": {
+     "created": [
+      "[new Date(1780272000000), new Date(1780531200000))"
+     ],
+     "email": [
+      "[MinKey, MaxKey]"
+     ]
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "CD6DAFBFB18A1AC6D2A0EB0C559F01AB32A666015A3BAFCED83CEF9F5C4E46C0",
+ "command": {
+  "find": "orders",
+  "filter": {
+   "created": {
+    "$gte": {
+     "$date": "2026-06-01T00:00:00Z"
+    },
+    "$lt": {
+     "$date": "2026-06-04T00:00:00Z"
+    }
+   }
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

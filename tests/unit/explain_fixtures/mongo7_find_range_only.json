@@ -1,0 +1,76 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "indexFilterSet": false,
+  "parsedQuery": {
+   "$and": [
+    {
+     "created": {
+      "$lt": {
+       "$date": "2026-06-04T00:00:00Z"
+      }
+     }
+    },
+    {
+     "created": {
+      "$gte": {
+       "$date": "2026-06-01T00:00:00Z"
+      }
+     }
+    }
+   ]
+  },
+  "queryHash": "9FF015CD",
+  "planCacheKey": "15EDA081",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "winningPlan": {
+   "stage": "FETCH",
+   "inputStage": {
+    "stage": "IXSCAN",
+    "keyPattern": {
+     "created": 1,
+     "email": 1
+    },
+    "indexName": "created_1_email_1",
+    "isMultiKey": false,
+    "multiKeyPaths": {
+     "created": [],
+     "email": []
+    },
+    "isUnique": false,
+    "isSparse": false,
+    "isPartial": false,
+    "indexVersion": 2,
+    "direction": "forward",
+    "indexBounds": {
+     "created": [
+      "[new Date(1780272000000), new Date(1780531200000))"
+     ],
+     "email": [
+      "[MinKey, MaxKey]"
+     ]
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "find": "orders",
+  "filter": {
+   "created": {
+    "$gte": {
+     "$date": "2026-06-01T00:00:00Z"
+    },
+    "$lt": {
+     "$date": "2026-06-04T00:00:00Z"
+    }
+   }
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

@@ -1,0 +1,93 @@
+{
+ "explainVersion": "2",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "customer_id": {
+    "$eq": 7
+   }
+  },
+  "indexFilterSet": false,
+  "queryHash": "C8BC678F",
+  "planCacheShapeHash": "C8BC678F",
+  "planCacheKey": "5BDA2397",
+  "optimizationTimeMillis": 0,
+  "optimizedPipeline": true,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "queryPlan": {
+    "stage": "EQ_LOOKUP",
+    "planNodeId": 3,
+    "foreignCollection": "app.customers",
+    "localField": "customer_id",
+    "foreignField": "_id",
+    "asField": "c",
+    "strategy": "IndexedLoopJoin",
+    "indexName": "_id_",
+    "indexKeyPattern": {
+     "_id": 1
+    },
+    "scanDirection": "forward",
+    "inputStage": {
+     "stage": "FETCH",
+     "planNodeId": 2,
+     "nss": "app.orders",
+     "inputStage": {
+      "stage": "IXSCAN",
+      "planNodeId": 1,
+      "nss": "app.orders",
+      "keyPattern": {
+       "customer_id": 1
+      },
+      "indexName": "customer_id_1",
+      "isMultiKey": false,
+      "multiKeyPaths": {
+       "customer_id": []
+      },
+      "isUnique": false,
+      "isSparse": false,
+      "isPartial": false,
+      "indexVersion": 2,
+      "direction": "forward",
+      "indexBounds": {
+       "customer_id": [
+        "[7, 7]"
+       ]
+      }
+     }
+    }
+   },
+   "slotBasedPlan": {
+    "slots": "$$RESULT=s28 env: { s5 = {\"customer_id\" : 1}, s19 = {\"_id\" : 1} }",
+    "stages": "[3] project [s28 = makeBsonObj(MakeObjSpec([c = Set(0)], Open, NewObj, 0), s6, s27)] \n[3] nlj inner [s6] [s9] \n    left \n        [3] project [s9 = arrayToSet(\n            if (isArray(s8) ?: false) \n            then \n                if isArrayEmpty(s8) \n                then [null] \n                else s8 \n            \n            else newArray((s8 ?: null)) \n       )] \n        [2] fetch s1 = seek, s6 = result, s7 = recordId, s4 = inSnapshotId, s2 = inIndexIdent, s3 = inIndexKey, s5 = inIndexKeyPattern [s8 = customer_id] @\"b124b1b3-a687-4c1b-9170-ca94e813d990\" \n        [1] ixseek seekKeyLow = KS(2B0E01) seekKeyHigh = KS(2B0EFE) [s3 = indexKey, s1 = recordId, s4 = snapshotId, s2 = indexIdent] [] @\"b124b1b3-a687-4c1b-9170-ca94e813d990\" @\"customer_id_1\" forward \n    right \n        [3] limit 1ll \n        [3] union [s27] \n            branch0 [s25] \n                [3] project [s25 = getElement(s24, 0)] \n                [3] group [] [s24 = addToArrayCapped(s20, 104857600)] spillSlots[s23] mergingExprs[aggConcatArraysCapped(s23, 104857600)] \n                [3] filter {traverseF((s22 ?: null), lambda(l8.0) { isMember(move(l8.0), s9) }, true)} \n                [3] fetch s15 = seek, s20 = result, s21 = recordId, s18 = inSnapshotId, s16 = inIndexIdent, s17 = inIndexKey, s19 = inIndexKeyPattern [s22 = _id] @\"77b0e87b-72cb-48bf-9c21-babecf80c177\" \n                [3] nlj inner [] [s13, s14] \n                    left \n                        [3] project [s13 = ks(1ll, 0, s11, 1ll), s14 = ks(1ll, 0, s11, 2ll)] \n                        [3] unwind s11 = outField, s12 = outIndex, s10 = inField _preserveNullAndEmptyArrays \n                        [3] project [s10 = \n                            if traverseF(s9, lambda(l4.0) { isArray(move(l4.0)) }, false) \n                            then arrayToSet(concatArrays(s9, traverseP(s9, lambda(l5.0) { \n                                if isArray(l5.0) \n                                then (getElement(move(l5.0), 0) ?: undefined) \n                                else move(l5.0) \n                            }, 1))) \n                            else s9 \n                       ] \n                        [3] limit 1ll \n                        [3] coscan \n                    right \n                        [3] ixseek seekKeyLow = s13 seekKeyHigh = s14 [s17 = indexKey, s15 = recordId, s18 = snapshotId, s16 = indexIdent] [] @\"77b0e87b-72cb-48bf-9c21-babecf80c177\" @\"_id_\" forward \n            branch1 [s26] \n                [3] project [s26 = []] \n                [3] limit 1ll \n                [3] coscan \n"
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "7C2CD9AAA473F0270CA59AE19A119743412B3E3A5DD428F96178D043129E47F4",
+ "command": {
+  "aggregate": "orders",
+  "pipeline": [
+   {
+    "$match": {
+     "customer_id": 7
+    }
+   },
+   {
+    "$lookup": {
+     "from": "customers",
+     "localField": "customer_id",
+     "foreignField": "_id",
+     "as": "c"
+    }
+   }
+  ],
+  "cursor": {},
+  "$db": "app"
+ },
+ "ok": 1.0
+}

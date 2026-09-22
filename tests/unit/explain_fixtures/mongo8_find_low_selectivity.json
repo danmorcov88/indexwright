@@ -1,0 +1,88 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "$and": [
+    {
+     "email": {
+      "$eq": "user7@example.com"
+     }
+    },
+    {
+     "created": {
+      "$lt": {
+       "$date": "2026-06-04T00:00:00Z"
+      }
+     }
+    },
+    {
+     "created": {
+      "$gte": {
+       "$date": "2026-06-01T00:00:00Z"
+      }
+     }
+    }
+   ]
+  },
+  "indexFilterSet": false,
+  "queryHash": "CDCF3A1B",
+  "planCacheShapeHash": "CDCF3A1B",
+  "planCacheKey": "6AF1253B",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "stage": "FETCH",
+   "nss": "app.orders",
+   "inputStage": {
+    "stage": "IXSCAN",
+    "nss": "app.orders",
+    "keyPattern": {
+     "created": 1,
+     "email": 1
+    },
+    "indexName": "created_1_email_1",
+    "isMultiKey": false,
+    "multiKeyPaths": {
+     "created": [],
+     "email": []
+    },
+    "isUnique": false,
+    "isSparse": false,
+    "isPartial": false,
+    "indexVersion": 2,
+    "direction": "forward",
+    "indexBounds": {
+     "created": [
+      "[new Date(1780272000000), new Date(1780531200000))"
+     ],
+     "email": [
+      "[\"user7@example.com\", \"user7@example.com\"]"
+     ]
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "705948053CAE8EE10CF720FDC3A688260B8D1637498C34F5FCA06A52ECB92D36",
+ "command": {
+  "find": "orders",
+  "filter": {
+   "created": {
+    "$gte": {
+     "$date": "2026-06-01T00:00:00Z"
+    },
+    "$lt": {
+     "$date": "2026-06-04T00:00:00Z"
+    }
+   },
+   "email": "user7@example.com"
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

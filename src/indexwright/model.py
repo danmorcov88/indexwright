@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from datetime import datetime
 
 Op = str
 OPS = frozenset({"find", "count", "distinct", "update", "delete", "findAndModify", "aggregate"})
+
+Severity = Literal["critical", "high", "medium", "low", "info"]
+SEVERITY_ORDER: dict[str, int] = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,8 @@ class ShapeStats:
     meta: ShapeMeta
     first_seen: datetime
     last_seen: datetime
+    # One real command of this shape, with its values. Only used to run explain; never reported.
+    sample: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @property
     def docs_per_returned(self) -> float:
@@ -73,3 +78,44 @@ class ShapeStats:
     @property
     def keys_per_returned(self) -> float:
         return self.keys_examined / max(self.nreturned, 1)
+
+
+@dataclass(frozen=True)
+class IndexInfo:
+    ns: str
+    name: str
+    keys: tuple[tuple[str, Any], ...]
+    unique: bool = False
+    sparse: bool = False
+    partial: bool = False
+    hidden: bool = False
+
+
+@dataclass(frozen=True)
+class ExplainResult:
+    stages: tuple[str, ...] = ()
+    index_names: tuple[str, ...] = ()
+    fetch_filter_fields: frozenset[str] = frozenset()
+    error: str | None = None
+
+    def has(self, stage: str) -> bool:
+        return stage in self.stages
+
+
+@dataclass(frozen=True)
+class Recommendation:
+    kind: Literal["create_index", "drop_index", "rewrite"]
+    ns: str
+    statement: str
+    keys: tuple[tuple[str, Any], ...] = ()
+
+
+@dataclass(frozen=True)
+class Finding:
+    severity: Severity
+    rule: str
+    ns: str
+    shape_id: str
+    message: str
+    recommendation: Recommendation | None = None
+    evidence: dict[str, Any] = field(default_factory=dict)

@@ -1,0 +1,69 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "created": {
+    "$gte": {
+     "$date": "2026-06-01T00:00:00Z"
+    }
+   }
+  },
+  "indexFilterSet": false,
+  "queryHash": "8FD84295",
+  "planCacheShapeHash": "8FD84295",
+  "planCacheKey": "B377738D",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "stage": "FETCH",
+   "nss": "app.orders",
+   "inputStage": {
+    "stage": "IXSCAN",
+    "nss": "app.orders",
+    "keyPattern": {
+     "created": 1,
+     "email": 1
+    },
+    "indexName": "created_1_email_1",
+    "isMultiKey": false,
+    "multiKeyPaths": {
+     "created": [],
+     "email": []
+    },
+    "isUnique": false,
+    "isSparse": false,
+    "isPartial": false,
+    "indexVersion": 2,
+    "direction": "forward",
+    "indexBounds": {
+     "created": [
+      "[new Date(1780272000000), new Date(9223372036854775807)]"
+     ],
+     "email": [
+      "[MinKey, MaxKey]"
+     ]
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "EB29D732BFA70369F4EAD174B8E8126F1454E97B535C0BD85DFADE3D619D451F",
+ "command": {
+  "distinct": "orders",
+  "key": "status",
+  "query": {
+   "created": {
+    "$gte": {
+     "$date": "2026-06-01T00:00:00Z"
+    }
+   }
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

@@ -1,0 +1,82 @@
+{
+ "explainVersion": "2",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "status": {
+    "$eq": "new"
+   }
+  },
+  "indexFilterSet": false,
+  "queryHash": "2BC16FB2",
+  "planCacheShapeHash": "2BC16FB2",
+  "planCacheKey": "4A793380",
+  "optimizationTimeMillis": 0,
+  "optimizedPipeline": true,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "queryPlan": {
+    "stage": "GROUP",
+    "planNodeId": 2,
+    "inputStage": {
+     "stage": "COUNT_SCAN",
+     "planNodeId": 1,
+     "nss": "app.orders",
+     "keyPattern": {
+      "status": 1
+     },
+     "indexName": "status_1",
+     "isMultiKey": false,
+     "multiKeyPaths": {
+      "status": []
+     },
+     "isUnique": false,
+     "isSparse": false,
+     "isPartial": false,
+     "indexVersion": 2,
+     "indexBounds": {
+      "startKey": {
+       "status": "new"
+      },
+      "startKeyInclusive": true,
+      "endKey": {
+       "status": "new"
+      },
+      "endKeyInclusive": true
+     }
+    }
+   },
+   "slotBasedPlan": {
+    "slots": "$$RESULT=s5 env: {  }",
+    "stages": "[2] project [s5 = newBsonObj(\"_id\", s4, \"n\", s2)] \n[2] project [s4 = 1] \n[2] group [] [s2 = _internalCount::accumulate(s2, 1)] spillSlots[s3] mergingExprs[_internalCount::merge(s3)] \n[1] ixseek seekKeyLow = KS(3C6E65770001) seekKeyHigh = KS(3C6E657700FE) [s1 = recordId] [] @\"b124b1b3-a687-4c1b-9170-ca94e813d990\" @\"status_1\" forward "
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "B5D3F38F76A0EE0FFD97E6AAC8CB2F066BAEECB3B496EA9717C568664F7FEED2",
+ "command": {
+  "aggregate": "orders",
+  "pipeline": [
+   {
+    "$match": {
+     "status": "new"
+    }
+   },
+   {
+    "$group": {
+     "_id": 1,
+     "n": {
+      "$sum": 1
+     }
+    }
+   }
+  ],
+  "cursor": {},
+  "$db": "app"
+ },
+ "ok": 1.0
+}

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from indexwright.model import ShapeMeta, ShapeStats
 from indexwright.shape import normalize
@@ -35,6 +35,7 @@ def percentile(values: list[int], p: float) -> int:
 class _Bucket:
     def __init__(self, shape: Shape, ts: datetime) -> None:
         self.shape = shape
+        self.sample: dict[str, Any] = {}
         self.millis: list[int] = []
         self.total_ms = 0
         self.docs_examined = 0
@@ -50,6 +51,8 @@ class _Bucket:
         # A getMore is a continuation of the same query: it adds work, not another execution.
         if not entry.getmore:
             self.millis.append(entry.millis)
+        if not self.sample:
+            self.sample = entry.command
         self.total_ms += entry.millis
         self.docs_examined += entry.docs_examined
         self.keys_examined += entry.keys_examined
@@ -77,4 +80,5 @@ class _Bucket:
             meta=self.meta,
             first_seen=self.first_seen,
             last_seen=self.last_seen,
+            sample=self.sample,
         )

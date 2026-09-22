@@ -1,0 +1,86 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "$and": [
+    {
+     "status": {
+      "$eq": "new"
+     }
+    },
+    {
+     "total": {
+      "$lt": 5
+     }
+    }
+   ]
+  },
+  "indexFilterSet": false,
+  "queryHash": "EB87F303",
+  "planCacheShapeHash": "EB87F303",
+  "planCacheKey": "F36092D6",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "stage": "UPDATE",
+   "inputStage": {
+    "stage": "FETCH",
+    "filter": {
+     "total": {
+      "$lt": 5
+     }
+    },
+    "nss": "app.orders",
+    "inputStage": {
+     "stage": "IXSCAN",
+     "nss": "app.orders",
+     "keyPattern": {
+      "status": 1
+     },
+     "indexName": "status_1",
+     "isMultiKey": false,
+     "multiKeyPaths": {
+      "status": []
+     },
+     "isUnique": false,
+     "isSparse": false,
+     "isPartial": false,
+     "indexVersion": 2,
+     "direction": "forward",
+     "indexBounds": {
+      "status": [
+       "[\"new\", \"new\"]"
+      ]
+     }
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "update": "orders",
+  "updates": [
+   {
+    "q": {
+     "status": "new",
+     "total": {
+      "$lt": 5
+     }
+    },
+    "u": {
+     "$set": {
+      "status": "cancelled"
+     }
+    },
+    "multi": true
+   }
+  ],
+  "$db": "app"
+ },
+ "ok": 1.0
+}

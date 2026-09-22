@@ -1,0 +1,38 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "indexFilterSet": false,
+  "parsedQuery": {
+   "email": {
+    "$regex": "user1"
+   }
+  },
+  "queryHash": "FFB7251D",
+  "planCacheKey": "CEA683BE",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "winningPlan": {
+   "stage": "COLLSCAN",
+   "filter": {
+    "email": {
+     "$regex": "user1"
+    }
+   },
+   "direction": "forward"
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "find": "orders",
+  "filter": {
+   "email": {
+    "$regex": "user1"
+   }
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

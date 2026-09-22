@@ -1,0 +1,55 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "indexFilterSet": false,
+  "parsedQuery": {
+   "status": {
+    "$eq": "new"
+   }
+  },
+  "queryHash": "4B6FAB47",
+  "planCacheKey": "65D76290",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "winningPlan": {
+   "stage": "COUNT",
+   "inputStage": {
+    "stage": "COUNT_SCAN",
+    "keyPattern": {
+     "status": 1
+    },
+    "indexName": "status_1",
+    "isMultiKey": false,
+    "multiKeyPaths": {
+     "status": []
+    },
+    "isUnique": false,
+    "isSparse": false,
+    "isPartial": false,
+    "indexVersion": 2,
+    "indexBounds": {
+     "startKey": {
+      "status": "new"
+     },
+     "startKeyInclusive": true,
+     "endKey": {
+      "status": "new"
+     },
+     "endKeyInclusive": true
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "count": "orders",
+  "query": {
+   "status": "new"
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

@@ -1,0 +1,83 @@
+{
+ "explainVersion": "1",
+ "stages": [
+  {
+   "$cursor": {
+    "queryPlanner": {
+     "namespace": "app.orders",
+     "indexFilterSet": false,
+     "parsedQuery": {
+      "status": {
+       "$eq": "new"
+      }
+     },
+     "queryHash": "4B6FAB47",
+     "planCacheKey": "65D76290",
+     "optimizationTimeMillis": 0,
+     "maxIndexedOrSolutionsReached": false,
+     "maxIndexedAndSolutionsReached": false,
+     "maxScansToExplodeReached": false,
+     "winningPlan": {
+      "stage": "COUNT_SCAN",
+      "keyPattern": {
+       "status": 1
+      },
+      "indexName": "status_1",
+      "isMultiKey": false,
+      "multiKeyPaths": {
+       "status": []
+      },
+      "isUnique": false,
+      "isSparse": false,
+      "isPartial": false,
+      "indexVersion": 2,
+      "indexBounds": {
+       "startKey": {
+        "status": "new"
+       },
+       "startKeyInclusive": true,
+       "endKey": {
+        "status": "new"
+       },
+       "endKeyInclusive": true
+      }
+     },
+     "rejectedPlans": []
+    }
+   }
+  },
+  {
+   "$group": {
+    "_id": {
+     "$const": 1
+    },
+    "n": {
+     "$sum": {
+      "$const": 1
+     }
+    }
+   }
+  }
+ ],
+ "command": {
+  "aggregate": "orders",
+  "pipeline": [
+   {
+    "$match": {
+     "status": "new"
+    }
+   },
+   {
+    "$group": {
+     "_id": 1,
+     "n": {
+      "$sum": 1
+     }
+    }
+   }
+  ],
+  "cursor": {},
+  "$db": "app"
+ },
+ "ok": 1.0
+}

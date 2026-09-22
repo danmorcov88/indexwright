@@ -1,0 +1,106 @@
+{
+ "explainVersion": "2",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "status": {
+    "$eq": "new"
+   }
+  },
+  "indexFilterSet": false,
+  "queryHash": "C9727056",
+  "planCacheShapeHash": "C9727056",
+  "planCacheKey": "CDAE0048",
+  "optimizationTimeMillis": 5,
+  "optimizedPipeline": true,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "queryPlan": {
+    "stage": "GROUP",
+    "planNodeId": 5,
+    "inputStage": {
+     "stage": "SORT",
+     "planNodeId": 4,
+     "sortPattern": {
+      "total": -1
+     },
+     "memLimit": 104857600,
+     "type": "simple",
+     "inputStage": {
+      "stage": "PROJECTION_SIMPLE",
+      "planNodeId": 3,
+      "transformBy": {
+       "customer_id": true,
+       "total": true,
+       "_id": false
+      },
+      "inputStage": {
+       "stage": "FETCH",
+       "planNodeId": 2,
+       "nss": "app.orders",
+       "inputStage": {
+        "stage": "IXSCAN",
+        "planNodeId": 1,
+        "nss": "app.orders",
+        "keyPattern": {
+         "status": 1
+        },
+        "indexName": "status_1",
+        "isMultiKey": false,
+        "multiKeyPaths": {
+         "status": []
+        },
+        "isUnique": false,
+        "isSparse": false,
+        "isPartial": false,
+        "indexVersion": 2,
+        "direction": "forward",
+        "indexBounds": {
+         "status": [
+          "[\"new\", \"new\"]"
+         ]
+        }
+       }
+      }
+     }
+    }
+   },
+   "slotBasedPlan": {
+    "slots": "$$RESULT=s15 env: { s5 = {\"status\" : 1} }",
+    "stages": "[5] project [s15 = newBsonObj(\"_id\", s13, \"total\", s14)] \n[5] project [s14 = doubleDoubleSumFinalize(s12)] \n[5] group [s13] [s12 = aggDoubleDoubleSum(s9)] spillSlots[s11] mergingExprs[aggMergeDoubleDoubleSums(s11)] \n[5] project [s13 = (s8 ?: null)] \n[4] sort [s10] [desc] [s8, s9] \n[4] project [s10 = getSortKeyDesc(s9)] \n[2] fetch s1 = seek, s6 = result, s7 = recordId, s4 = inSnapshotId, s2 = inIndexIdent, s3 = inIndexKey, s5 = inIndexKeyPattern [s8 = customer_id, s9 = total] @\"b124b1b3-a687-4c1b-9170-ca94e813d990\" \n[1] ixseek seekKeyLow = KS(3C6E65770001) seekKeyHigh = KS(3C6E657700FE) [s3 = indexKey, s1 = recordId, s4 = snapshotId, s2 = indexIdent] [] @\"b124b1b3-a687-4c1b-9170-ca94e813d990\" @\"status_1\" forward "
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "F37A785EE75FD7F691E8F55C255052D687D291AF5CC0849EE0D388E968AF41D2",
+ "command": {
+  "aggregate": "orders",
+  "pipeline": [
+   {
+    "$match": {
+     "status": "new"
+    }
+   },
+   {
+    "$sort": {
+     "total": -1
+    }
+   },
+   {
+    "$group": {
+     "_id": "$customer_id",
+     "total": {
+      "$sum": "$total"
+     }
+    }
+   }
+  ],
+  "cursor": {},
+  "$db": "app"
+ },
+ "ok": 1.0
+}

@@ -1,0 +1,59 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "status": {
+    "$eq": "new"
+   }
+  },
+  "indexFilterSet": false,
+  "queryHash": "F7CB0027",
+  "planCacheShapeHash": "F7CB0027",
+  "planCacheKey": "F1FC435E",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "stage": "COUNT",
+   "inputStage": {
+    "stage": "COUNT_SCAN",
+    "nss": "app.orders",
+    "keyPattern": {
+     "status": 1
+    },
+    "indexName": "status_1",
+    "isMultiKey": false,
+    "multiKeyPaths": {
+     "status": []
+    },
+    "isUnique": false,
+    "isSparse": false,
+    "isPartial": false,
+    "indexVersion": 2,
+    "indexBounds": {
+     "startKey": {
+      "status": "new"
+     },
+     "startKeyInclusive": true,
+     "endKey": {
+      "status": "new"
+     },
+     "endKeyInclusive": true
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "5A5EFA8C6968011CF9B38FD60D1671A4EE466A2DD2548B6B86E51C595D823EB9",
+ "command": {
+  "count": "orders",
+  "query": {
+   "status": "new"
+  }
+ },
+ "ok": 1.0
+}

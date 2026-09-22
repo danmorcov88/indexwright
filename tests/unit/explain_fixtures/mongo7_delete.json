@@ -1,0 +1,76 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "indexFilterSet": false,
+  "parsedQuery": {
+   "$and": [
+    {
+     "status": {
+      "$eq": "cancelled"
+     }
+    },
+    {
+     "total": {
+      "$lt": 5
+     }
+    }
+   ]
+  },
+  "queryHash": "B1B56B57",
+  "planCacheKey": "F04FD1C4",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "winningPlan": {
+   "stage": "DELETE",
+   "inputStage": {
+    "stage": "FETCH",
+    "filter": {
+     "total": {
+      "$lt": 5
+     }
+    },
+    "inputStage": {
+     "stage": "IXSCAN",
+     "keyPattern": {
+      "status": 1
+     },
+     "indexName": "status_1",
+     "isMultiKey": false,
+     "multiKeyPaths": {
+      "status": []
+     },
+     "isUnique": false,
+     "isSparse": false,
+     "isPartial": false,
+     "indexVersion": 2,
+     "direction": "forward",
+     "indexBounds": {
+      "status": [
+       "[\"cancelled\", \"cancelled\"]"
+      ]
+     }
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "delete": "orders",
+  "deletes": [
+   {
+    "q": {
+     "status": "cancelled",
+     "total": {
+      "$lt": 5
+     }
+    },
+    "limit": 1
+   }
+  ],
+  "$db": "app"
+ },
+ "ok": 1.0
+}

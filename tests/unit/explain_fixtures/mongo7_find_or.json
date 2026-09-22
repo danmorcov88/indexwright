@@ -1,0 +1,66 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "indexFilterSet": false,
+  "parsedQuery": {
+   "$or": [
+    {
+     "status": {
+      "$eq": "new"
+     }
+    },
+    {
+     "total": {
+      "$gt": 990
+     }
+    }
+   ]
+  },
+  "queryHash": "018F9C73",
+  "planCacheKey": "5B18447A",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "winningPlan": {
+   "stage": "SUBPLAN",
+   "inputStage": {
+    "stage": "COLLSCAN",
+    "filter": {
+     "$or": [
+      {
+       "status": {
+        "$eq": "new"
+       }
+      },
+      {
+       "total": {
+        "$gt": 990
+       }
+      }
+     ]
+    },
+    "direction": "forward"
+   }
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "find": "orders",
+  "filter": {
+   "$or": [
+    {
+     "status": "new"
+    },
+    {
+     "total": {
+      "$gt": 990
+     }
+    }
+   ]
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

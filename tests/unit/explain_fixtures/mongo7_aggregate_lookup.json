@@ -1,0 +1,78 @@
+{
+ "explainVersion": "1",
+ "stages": [
+  {
+   "$cursor": {
+    "queryPlanner": {
+     "namespace": "app.orders",
+     "indexFilterSet": false,
+     "parsedQuery": {
+      "customer_id": {
+       "$eq": 7
+      }
+     },
+     "queryHash": "912E527C",
+     "planCacheKey": "EB59B595",
+     "optimizationTimeMillis": 0,
+     "maxIndexedOrSolutionsReached": false,
+     "maxIndexedAndSolutionsReached": false,
+     "maxScansToExplodeReached": false,
+     "winningPlan": {
+      "stage": "FETCH",
+      "inputStage": {
+       "stage": "IXSCAN",
+       "keyPattern": {
+        "customer_id": 1
+       },
+       "indexName": "customer_id_1",
+       "isMultiKey": false,
+       "multiKeyPaths": {
+        "customer_id": []
+       },
+       "isUnique": false,
+       "isSparse": false,
+       "isPartial": false,
+       "indexVersion": 2,
+       "direction": "forward",
+       "indexBounds": {
+        "customer_id": [
+         "[7, 7]"
+        ]
+       }
+      }
+     },
+     "rejectedPlans": []
+    }
+   }
+  },
+  {
+   "$lookup": {
+    "from": "customers",
+    "as": "c",
+    "localField": "customer_id",
+    "foreignField": "_id"
+   }
+  }
+ ],
+ "command": {
+  "aggregate": "orders",
+  "pipeline": [
+   {
+    "$match": {
+     "customer_id": 7
+    }
+   },
+   {
+    "$lookup": {
+     "from": "customers",
+     "localField": "customer_id",
+     "foreignField": "_id",
+     "as": "c"
+    }
+   }
+  ],
+  "cursor": {},
+  "$db": "app"
+ },
+ "ok": 1.0
+}

@@ -1,0 +1,57 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "customer_id": {
+    "$eq": 7
+   }
+  },
+  "indexFilterSet": false,
+  "queryHash": "B96D79A1",
+  "planCacheShapeHash": "B96D79A1",
+  "planCacheKey": "BC7DDBF4",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "stage": "FETCH",
+   "nss": "app.orders",
+   "inputStage": {
+    "stage": "IXSCAN",
+    "nss": "app.orders",
+    "keyPattern": {
+     "customer_id": 1
+    },
+    "indexName": "customer_id_1",
+    "isMultiKey": false,
+    "multiKeyPaths": {
+     "customer_id": []
+    },
+    "isUnique": false,
+    "isSparse": false,
+    "isPartial": false,
+    "indexVersion": 2,
+    "direction": "forward",
+    "indexBounds": {
+     "customer_id": [
+      "[7, 7]"
+     ]
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "44F0803A44AB0D645C0EFD569B495185CD71293A69CD8782C85E271B426F4F18",
+ "command": {
+  "find": "orders",
+  "filter": {
+   "customer_id": 7
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

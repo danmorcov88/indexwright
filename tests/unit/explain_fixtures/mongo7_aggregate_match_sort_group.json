@@ -1,0 +1,99 @@
+{
+ "explainVersion": "1",
+ "stages": [
+  {
+   "$cursor": {
+    "queryPlanner": {
+     "namespace": "app.orders",
+     "indexFilterSet": false,
+     "parsedQuery": {
+      "status": {
+       "$eq": "new"
+      }
+     },
+     "queryHash": "F29B7E29",
+     "planCacheKey": "3FC094B2",
+     "optimizationTimeMillis": 0,
+     "maxIndexedOrSolutionsReached": false,
+     "maxIndexedAndSolutionsReached": false,
+     "maxScansToExplodeReached": false,
+     "winningPlan": {
+      "stage": "SORT",
+      "sortPattern": {
+       "total": -1
+      },
+      "memLimit": 104857600,
+      "type": "simple",
+      "inputStage": {
+       "stage": "PROJECTION_SIMPLE",
+       "transformBy": {
+        "customer_id": 1,
+        "total": 1,
+        "_id": 0
+       },
+       "inputStage": {
+        "stage": "FETCH",
+        "inputStage": {
+         "stage": "IXSCAN",
+         "keyPattern": {
+          "status": 1
+         },
+         "indexName": "status_1",
+         "isMultiKey": false,
+         "multiKeyPaths": {
+          "status": []
+         },
+         "isUnique": false,
+         "isSparse": false,
+         "isPartial": false,
+         "indexVersion": 2,
+         "direction": "forward",
+         "indexBounds": {
+          "status": [
+           "[\"new\", \"new\"]"
+          ]
+         }
+        }
+       }
+      }
+     },
+     "rejectedPlans": []
+    }
+   }
+  },
+  {
+   "$group": {
+    "_id": "$customer_id",
+    "total": {
+     "$sum": "$total"
+    }
+   }
+  }
+ ],
+ "command": {
+  "aggregate": "orders",
+  "pipeline": [
+   {
+    "$match": {
+     "status": "new"
+    }
+   },
+   {
+    "$sort": {
+     "total": -1
+    }
+   },
+   {
+    "$group": {
+     "_id": "$customer_id",
+     "total": {
+      "$sum": "$total"
+     }
+    }
+   }
+  ],
+  "cursor": {},
+  "$db": "app"
+ },
+ "ok": 1.0
+}

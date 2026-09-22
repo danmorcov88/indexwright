@@ -1,0 +1,67 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "indexFilterSet": false,
+  "parsedQuery": {
+   "created": {
+    "$gte": {
+     "$date": "2026-06-01T00:00:00Z"
+    }
+   }
+  },
+  "queryHash": "3F110A94",
+  "planCacheKey": "9B8AD44F",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "winningPlan": {
+   "stage": "PROJECTION_SIMPLE",
+   "transformBy": {},
+   "inputStage": {
+    "stage": "FETCH",
+    "inputStage": {
+     "stage": "IXSCAN",
+     "keyPattern": {
+      "created": 1,
+      "email": 1
+     },
+     "indexName": "created_1_email_1",
+     "isMultiKey": false,
+     "multiKeyPaths": {
+      "created": [],
+      "email": []
+     },
+     "isUnique": false,
+     "isSparse": false,
+     "isPartial": false,
+     "indexVersion": 2,
+     "direction": "forward",
+     "indexBounds": {
+      "created": [
+       "[new Date(1780272000000), new Date(9223372036854775807)]"
+      ],
+      "email": [
+       "[MinKey, MaxKey]"
+      ]
+     }
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "distinct": "orders",
+  "key": "status",
+  "query": {
+   "created": {
+    "$gte": {
+     "$date": "2026-06-01T00:00:00Z"
+    }
+   }
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}

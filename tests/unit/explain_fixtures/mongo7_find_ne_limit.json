@@ -1,0 +1,61 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "indexFilterSet": false,
+  "parsedQuery": {
+   "status": {
+    "$not": {
+     "$eq": "done"
+    }
+   }
+  },
+  "queryHash": "167D15F8",
+  "planCacheKey": "F7EA10A6",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "winningPlan": {
+   "stage": "LIMIT",
+   "limitAmount": 50,
+   "inputStage": {
+    "stage": "FETCH",
+    "inputStage": {
+     "stage": "IXSCAN",
+     "keyPattern": {
+      "status": 1
+     },
+     "indexName": "status_1",
+     "isMultiKey": false,
+     "multiKeyPaths": {
+      "status": []
+     },
+     "isUnique": false,
+     "isSparse": false,
+     "isPartial": false,
+     "indexVersion": 2,
+     "direction": "forward",
+     "indexBounds": {
+      "status": [
+       "[MinKey, \"done\")",
+       "(\"done\", MaxKey]"
+      ]
+     }
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "find": "orders",
+  "filter": {
+   "status": {
+    "$ne": "done"
+   }
+  },
+  "limit": 50,
+  "$db": "app"
+ },
+ "ok": 1.0
+}

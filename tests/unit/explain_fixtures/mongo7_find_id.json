@@ -1,0 +1,32 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "indexFilterSet": false,
+  "parsedQuery": {
+   "_id": {
+    "$eq": 5
+   }
+  },
+  "queryHash": "869CED4F",
+  "planCacheKey": "333C0A17",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "winningPlan": {
+   "stage": "IDHACK"
+  },
+  "rejectedPlans": []
+ },
+ "command": {
+  "find": "orders",
+  "filter": {
+   "_id": 5
+  },
+  "limit": 1,
+  "singleBatch": true,
+  "$db": "app"
+ },
+ "ok": 1.0
+}

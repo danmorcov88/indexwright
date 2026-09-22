@@ -1,0 +1,67 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "status": {
+    "$not": {
+     "$eq": "done"
+    }
+   }
+  },
+  "indexFilterSet": false,
+  "queryHash": "B8205CAE",
+  "planCacheShapeHash": "B8205CAE",
+  "planCacheKey": "78B87D38",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "stage": "LIMIT",
+   "limitAmount": 50,
+   "inputStage": {
+    "stage": "FETCH",
+    "nss": "app.orders",
+    "inputStage": {
+     "stage": "IXSCAN",
+     "nss": "app.orders",
+     "keyPattern": {
+      "status": 1
+     },
+     "indexName": "status_1",
+     "isMultiKey": false,
+     "multiKeyPaths": {
+      "status": []
+     },
+     "isUnique": false,
+     "isSparse": false,
+     "isPartial": false,
+     "indexVersion": 2,
+     "direction": "forward",
+     "indexBounds": {
+      "status": [
+       "[MinKey, \"done\")",
+       "(\"done\", MaxKey]"
+      ]
+     }
+    }
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "85C96F30D0DE078C46C2DFCDDBE165A910B556B63056702BE443DBEF835D4248",
+ "command": {
+  "find": "orders",
+  "filter": {
+   "status": {
+    "$ne": "done"
+   }
+  },
+  "limit": 50,
+  "$db": "app"
+ },
+ "ok": 1.0
+}

@@ -1,0 +1,70 @@
+{
+ "explainVersion": "1",
+ "queryPlanner": {
+  "namespace": "app.orders",
+  "parsedQuery": {
+   "$or": [
+    {
+     "status": {
+      "$eq": "new"
+     }
+    },
+    {
+     "total": {
+      "$gt": 990
+     }
+    }
+   ]
+  },
+  "indexFilterSet": false,
+  "queryHash": "8539FE9E",
+  "planCacheShapeHash": "8539FE9E",
+  "planCacheKey": "B121F914",
+  "optimizationTimeMillis": 0,
+  "maxIndexedOrSolutionsReached": false,
+  "maxIndexedAndSolutionsReached": false,
+  "maxScansToExplodeReached": false,
+  "prunedSimilarIndexes": false,
+  "winningPlan": {
+   "isCached": false,
+   "stage": "SUBPLAN",
+   "inputStage": {
+    "stage": "COLLSCAN",
+    "filter": {
+     "$or": [
+      {
+       "status": {
+        "$eq": "new"
+       }
+      },
+      {
+       "total": {
+        "$gt": 990
+       }
+      }
+     ]
+    },
+    "direction": "forward"
+   }
+  },
+  "rejectedPlans": []
+ },
+ "queryShapeHash": "FCBFDD25DEB85259DC5E9F9191C414AFDF606C8E52D5A7DFD23E6EA3FE5B6E8D",
+ "command": {
+  "find": "orders",
+  "filter": {
+   "$or": [
+    {
+     "status": "new"
+    },
+    {
+     "total": {
+      "$gt": 990
+     }
+    }
+   ]
+  },
+  "$db": "app"
+ },
+ "ok": 1.0
+}
