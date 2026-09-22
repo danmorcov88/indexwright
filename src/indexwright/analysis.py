@@ -70,7 +70,7 @@ def analyze(
     findings: list[Finding] = []
     for stats in analysis.shapes:
         explain = explainer.explain(stats)
-        findings.extend(run_rules(stats, explain, catalog.for_ns(stats.shape.ns)))
+        findings.extend(run_rules(stats, explain, catalog))
     analysis.explains = explainer.executed
     indexes = inventory(conn, unused_days)
     for coll in indexes.collections:

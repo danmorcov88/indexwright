@@ -3,17 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from indexwright.rules.base import is_collscan, severity, usable, with_advice
+from indexwright.rules.predicates import negation_only
 from indexwright.rules.sort_in_memory import sorts_in_memory
 
 if TYPE_CHECKING:
-    from indexwright.model import ExplainResult, Finding, IndexInfo, ShapeStats
+    from indexwright.model import ExplainResult, Finding, ShapeStats
+    from indexwright.rules.base import Indexes
 
 THRESHOLD = 10
 
 
-def check(
-    stats: ShapeStats, explain: ExplainResult | None, indexes: list[IndexInfo]
-) -> list[Finding]:
+def check(stats: ShapeStats, explain: ExplainResult | None, catalog: Indexes) -> list[Finding]:
     plan = usable(explain)
     if (
         plan is None
@@ -24,7 +24,7 @@ def check(
         return []
     if is_collscan(stats, explain) or sorts_in_memory(stats, explain):
         return []
-    if stats.docs_per_returned <= THRESHOLD:
+    if negation_only(stats.shape.filter) or stats.docs_per_returned <= THRESHOLD:
         return []
     fields = ", ".join(sorted(plan.fetch_filter_fields))
     used = ", ".join(plan.index_names) or "an index"
@@ -37,4 +37,4 @@ def check(
         "indexes_used": list(plan.index_names),
         "filter_fields_not_in_index": sorted(plan.fetch_filter_fields),
     }
-    return with_advice("docs_examined_ratio", stats, severity(stats), message, indexes, evidence)
+    return with_advice("docs_examined_ratio", stats, severity(stats), message, catalog, evidence)

@@ -5,7 +5,8 @@ from typing import TYPE_CHECKING
 from indexwright.rules.base import is_collscan, severity, usable, with_advice
 
 if TYPE_CHECKING:
-    from indexwright.model import ExplainResult, Finding, IndexInfo, ShapeStats
+    from indexwright.model import ExplainResult, Finding, ShapeStats
+    from indexwright.rules.base import Indexes
 
 
 def sorts_in_memory(stats: ShapeStats, explain: ExplainResult | None) -> bool:
@@ -16,9 +17,7 @@ def sorts_in_memory(stats: ShapeStats, explain: ExplainResult | None) -> bool:
     return any(s.startswith("SORT") and s != "SORT_MERGE" for s in plan.stages)
 
 
-def check(
-    stats: ShapeStats, explain: ExplainResult | None, indexes: list[IndexInfo]
-) -> list[Finding]:
+def check(stats: ShapeStats, explain: ExplainResult | None, catalog: Indexes) -> list[Finding]:
     if not stats.shape.sort or is_collscan(stats, explain) or not sorts_in_memory(stats, explain):
         return []
     fields = ", ".join(f"{field}:{direction}" for field, direction in stats.shape.sort)
@@ -28,4 +27,4 @@ def check(
         "sort": [list(pair) for pair in stats.shape.sort],
         "indexes_used": list(plan.index_names) if plan else [],
     }
-    return with_advice("sort_in_memory", stats, severity(stats), message, indexes, evidence)
+    return with_advice("sort_in_memory", stats, severity(stats), message, catalog, evidence)

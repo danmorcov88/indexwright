@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from indexwright.model import Finding
 from indexwright.rules import esr
@@ -10,7 +10,20 @@ if TYPE_CHECKING:
 
     from indexwright.model import ExplainResult, IndexInfo, Severity, ShapeStats
 
-    Rule = Callable[[ShapeStats, ExplainResult | None, list[IndexInfo]], list[Finding]]
+    Rule = Callable[[ShapeStats, ExplainResult | None, "Indexes"], list[Finding]]
+
+
+class Indexes(Protocol):
+    known: bool
+
+    def for_ns(self, ns: str) -> list[IndexInfo]: ...
+
+
+class NoIndexes:
+    known = False
+
+    def for_ns(self, ns: str) -> list[IndexInfo]:
+        return []
 
 
 def severity(stats: ShapeStats) -> Severity:
@@ -37,11 +50,11 @@ def with_advice(
     stats: ShapeStats,
     level: Severity,
     message: str,
-    indexes: list[IndexInfo],
+    catalog: Indexes,
     evidence: dict[str, Any],
 ) -> list[Finding]:
     shape = stats.shape
-    advice = esr.advise(shape, indexes)
+    advice = esr.advise(shape, catalog.for_ns(shape.ns))
     evidence = {**evidence, "count": stats.count, "p99_ms": stats.p99_ms}
     if advice.recommendations:
         return [

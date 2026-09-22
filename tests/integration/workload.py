@@ -38,10 +38,22 @@ EXPECTED_SHAPES: set[tuple[str, str]] = {
         "[{$match:{customer_id:?}}, "
         "{$lookup:{foreignField:_id, from:customers, localField:customer_id}}]",
     ),
+    (
+        "aggregate",
+        "[{$match:{customer_id:?}}, "
+        "{$lookup:{foreignField:email, from:customers, localField:email}}]",
+    ),
 }
 
-# (op, compact shape) -> (rule, recommended index keys). Every other shape must be clean.
+# (op, compact shape) -> (rule, recommended index keys or "rewrite"). Other shapes are clean.
 EXPECTED_FINDINGS: dict[tuple[str, str], tuple[str, str]] = {
+    ("find", "{status:{$ne:?}}"): ("negation_predicate", "rewrite"),
+    ("find", "{customer_id:{$in:[?]}}"): ("large_in", "rewrite"),
+    (
+        "aggregate",
+        "[{$match:{customer_id:?}}, "
+        "{$lookup:{foreignField:email, from:customers, localField:email}}]",
+    ): ("lookup_no_index", "{email: 1}"),
     ("find", "{email:{$regex:?}}"): ("collscan", "{email: 1}"),
     ("find", "{$or:[{status:?}, {total:{$gt:?}}]}"): ("collscan", "{total: 1}"),
     ("find", "{status:?} sort {total:-1}"): ("sort_in_memory", "{status: 1, total: -1}"),
@@ -206,6 +218,23 @@ def run(client: MongoClient[dict[str, Any]]) -> int:
                             "localField": "customer_id",
                             "foreignField": "_id",
                             "as": "customer",
+                        }
+                    },
+                ]
+            )
+        )
+        ops += 1
+    for _ in range(20):
+        list(
+            orders.aggregate(
+                [
+                    {"$match": {"customer_id": rng.randint(1, 500)}},
+                    {
+                        "$lookup": {
+                            "from": "customers",
+                            "localField": "email",
+                            "foreignField": "email",
+                            "as": "same_email",
                         }
                     },
                 ]

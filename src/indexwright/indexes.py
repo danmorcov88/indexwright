@@ -31,6 +31,8 @@ _URI = re.compile(r"^(mongodb(?:\+srv)?)://(?:([^@/]*)@)?([^/?]+)(/[^?]*)?(?:\?(
 
 
 class IndexCatalog:
+    known = True
+
     def __init__(self, conn: Connection) -> None:
         self.conn = conn
         self._cache: dict[str, list[IndexInfo]] = {}

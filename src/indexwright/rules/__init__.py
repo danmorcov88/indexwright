@@ -7,15 +7,17 @@ from indexwright.rules import (
     collscan,
     docs_examined_ratio,
     index_rules,
+    lookup,
     low_selectivity_index,
+    predicates,
     sort_in_memory,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from indexwright.model import CollectionIndexes, ExplainResult, Finding, IndexInfo, ShapeStats
-    from indexwright.rules.base import Rule
+    from indexwright.model import CollectionIndexes, ExplainResult, Finding, ShapeStats
+    from indexwright.rules.base import Indexes, Rule
 
     IndexRule = Callable[[CollectionIndexes, set[str]], list[Finding]]
 
@@ -24,6 +26,10 @@ RULES: list[tuple[str, Rule]] = [
     ("sort_in_memory", sort_in_memory.check),
     ("docs_examined_ratio", docs_examined_ratio.check),
     ("low_selectivity_index", low_selectivity_index.check),
+    ("unanchored_regex", predicates.unanchored_regex),
+    ("negation_predicate", predicates.negation_predicate),
+    ("large_in", predicates.large_in),
+    ("lookup_no_index", lookup.lookup_no_index),
 ]
 
 
@@ -45,10 +51,8 @@ def run_index_rules(coll: CollectionIndexes) -> list[Finding]:
     return findings
 
 
-def run_rules(
-    stats: ShapeStats, explain: ExplainResult | None, indexes: list[IndexInfo]
-) -> list[Finding]:
-    return [finding for _, rule in RULES for finding in rule(stats, explain, indexes)]
+def run_rules(stats: ShapeStats, explain: ExplainResult | None, catalog: Indexes) -> list[Finding]:
+    return [finding for _, rule in RULES for finding in rule(stats, explain, catalog)]
 
 
 def sort_findings(findings: list[Finding], weight: dict[str, int]) -> list[Finding]:

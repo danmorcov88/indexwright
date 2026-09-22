@@ -36,7 +36,8 @@ def test_workload_findings_match_exactly(mongo: Mongo, workload: int) -> None:
         label = labels[finding.shape_id]
         assert label not in found, f"{label} has more than one finding"
         assert finding.recommendation is not None, f"{label}: {finding.message}"
-        found[label] = (finding.rule, format_keys(finding.recommendation.keys))
+        rec = finding.recommendation
+        found[label] = (finding.rule, format_keys(rec.keys) if rec.keys else rec.kind)
     assert found == EXPECTED_FINDINGS
 
     for finding in shape_findings:
@@ -44,8 +45,8 @@ def test_workload_findings_match_exactly(mongo: Mongo, workload: int) -> None:
         assert "example.com" not in str(finding.evidence)
 
     statements = result.create_index_statements()
-    assert len(statements) == 5
-    assert all(rec.statement.startswith("db.orders.createIndex(") for rec, _ in statements)
+    assert len(statements) == 6
+    assert sum(rec.ns == "app.customers" for rec, _ in statements) == 1
 
 
 def test_analyze_command(mongo: Mongo, workload: int) -> None:
@@ -57,5 +58,5 @@ def test_analyze_command(mongo: Mongo, workload: int) -> None:
     assert "db.orders.createIndex({email: 1}" in result.output
     assert "Indexes to drop" in result.output
     assert 'db.orders.dropIndex("created_1")' in result.output
-    assert "analyze:" in result.output and "19 shapes, 19 explains" in result.output
+    assert "analyze:" in result.output and "20 shapes, 20 explains" in result.output
     assert mongo.opcounters() == before

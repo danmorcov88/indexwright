@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Rules `unanchored_regex`, `negation_predicate`, `large_in`, `lookup_no_index`.
 - `indexes` command: inventory with flags, usage and member coverage. `analyze --unused-days` and an "Indexes to drop" list.
 - Index hygiene rules `duplicate_index`, `redundant_index`, `unused_index`, `too_many_indexes`; `_id`, unique and TTL indexes are never proposed for dropping.
 - Index usage read from every replica set member through `$indexStats` (ops summed, earliest `since`), with unreachable members reported instead of silently ignored.
