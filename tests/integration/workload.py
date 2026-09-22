@@ -59,6 +59,16 @@ EXPECTED_FINDINGS: dict[tuple[str, str], tuple[str, str]] = {
     ),
 }
 
+# Index name -> rule, with --unused-days 0. Everything else, _id_ first, must stay clean.
+# A key-identical duplicate cannot be created since 4.2, so none is seeded; the partial
+# email_1 index must not be reported as redundant to created_1_email_1 or as a duplicate.
+EXPECTED_INDEX_FINDINGS: dict[str, str] = {
+    "app.orders.created_1": "redundant_index",
+    "app.orders.tags_1": "unused_index",
+    "app.orders.email_1": "unused_index",
+    **{f"app.customers.f{i}_1": "unused_index" for i in range(21)},
+}
+
 
 def seed(client: MongoClient[dict[str, Any]]) -> None:
     rng = random.Random(42)
@@ -88,6 +98,11 @@ def seed(client: MongoClient[dict[str, Any]]) -> None:
     db.orders.create_index("customer_id")
     db.orders.create_index("status")
     db.orders.create_index([("created", 1), ("email", 1)])
+    db.orders.create_index("created")
+    db.orders.create_index("tags")
+    db.orders.create_index("email", partialFilterExpression={"status": "new"})
+    for i in range(21):
+        db.customers.create_index(f"f{i}")
 
 
 def run(client: MongoClient[dict[str, Any]]) -> int:

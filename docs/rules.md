@@ -67,3 +67,51 @@ equality field, or a `$regex` is not anchored, so a large part of the index is w
 
 **Recommends:** the ESR index. When the ideal index already exists, the finding says so and the
 cause is in the message (for example an unanchored regex).
+
+## Index hygiene rules
+
+These run per collection over `listIndexes` and the merged `$indexStats` usage, not per query
+shape. They run in this order and an index one rule proposes to drop is skipped by the next,
+so each index gets at most one finding: `duplicate_index`, `redundant_index`, `unused_index`,
+`too_many_indexes`. `_id_`, unique and TTL indexes are never proposed for dropping.
+
+## duplicate_index
+
+**Detects:** two indexes with the same key pattern, partial filter and collation.
+
+**Why it matters:** every write maintains both, and only one is ever used. MongoDB refuses to
+create such a pair since 4.2, so these are leftovers from before an upgrade.
+
+**Recommends:** `dropIndex` on the extra one; a unique index is kept first, then the one with
+the most recorded use.
+
+## redundant_index
+
+**Detects:** index A whose keys are a strict prefix of index B's keys, with the same
+directions (a single key counts in either direction). Skipped when A is unique, partial,
+sparse or TTL, or B is partial or sparse, because those mean different things.
+
+**Why it matters:** B answers every query A can answer, so A only costs write time and memory.
+
+**Recommends:** `dropIndex` on A.
+
+## unused_index
+
+**Detects:** zero operations on every replica set member that could be reached, and the
+counters started more than `--unused-days` ago (default 30). Usage counters reset when a node
+restarts, so the window matters.
+
+**Why it matters:** an index nobody reads still costs every insert, update and delete.
+
+**Recommends:** `dropIndex`, at severity `low`, because the counters are per node: secondaries
+that serve reads have their own numbers. When a member could not be reached the message says
+so. Verify on every member before dropping.
+
+## too_many_indexes
+
+**Detects:** more than 20 indexes on a collection.
+
+**Why it matters:** each write maintains every index. Severity is `medium` when writes are at
+least 30% of the collection's operations (from the `top` command), `low` otherwise.
+
+**Recommends:** review; no statement.

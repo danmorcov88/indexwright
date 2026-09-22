@@ -116,7 +116,7 @@ def test_sort_only_query() -> None:
     assert _keys({}, {"created": -1}) == [(("created", -1),)]
 
 
-def _index(name: str, *keys: tuple[str, Any], **flags: bool) -> IndexInfo:
+def _index(name: str, *keys: tuple[str, Any], **flags: Any) -> IndexInfo:
     return IndexInfo("app.orders", name, keys, **flags)
 
 

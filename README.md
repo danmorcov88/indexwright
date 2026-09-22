@@ -30,7 +30,8 @@ db.createUser({
 export MONGODB_URI="mongodb://indexwright:<password>@host:27017/app?authSource=admin"
 indexwright doctor                       # connectivity, version, privileges, profiler, $indexStats
 indexwright shapes  --db app --since 24h # query shapes with count, p50, p99, docs examined per returned
-indexwright analyze --db app --since 24h # findings and createIndex statements
+indexwright analyze --db app --since 24h # findings, createIndex and dropIndex statements
+indexwright indexes --db app             # index inventory with usage from every replica set member
 ```
 
 Exit codes: `0` ok, `1` a check failed or a high/critical finding exists, `2` cannot connect,

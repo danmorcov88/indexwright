@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 from indexwright.aggregate import group
 from indexwright.doctor import run_checks
 from indexwright.explain import Explainer
-from indexwright.indexes import IndexCatalog
-from indexwright.rules import run_rules, sort_findings
+from indexwright.indexes import IndexCatalog, inventory
+from indexwright.rules import run_index_rules, run_rules, sort_findings
 from indexwright.source import read_all
 
 if TYPE_CHECKING:
@@ -26,6 +26,9 @@ class Analysis:
     findings: list[Finding] = field(default_factory=list)
     entries_read: int = 0
     explains: int = 0
+    members_total: int = 1
+    members_reached: int = 1
+    unreachable: list[str] = field(default_factory=list)
 
     @property
     def failed_checks(self) -> list[Check]:
@@ -44,8 +47,18 @@ class Analysis:
             grouped.setdefault(rec.statement, (rec, []))[1].append(finding.shape_id)
         return list(grouped.values())
 
+    def drop_index_statements(self) -> list[Recommendation]:
+        seen: dict[str, Recommendation] = {}
+        for finding in self.findings:
+            rec = finding.recommendation
+            if rec is not None and rec.kind == "drop_index":
+                seen.setdefault(rec.statement, rec)
+        return list(seen.values())
 
-def analyze(conn: Connection, since: datetime, limit: int, max_explains: int) -> Analysis:
+
+def analyze(
+    conn: Connection, since: datetime, limit: int, max_explains: int, unused_days: int = 30
+) -> Analysis:
     analysis = Analysis(checks=run_checks(conn))
     if analysis.failed_checks:
         return analysis
@@ -58,9 +71,15 @@ def analyze(conn: Connection, since: datetime, limit: int, max_explains: int) ->
     for stats in analysis.shapes:
         explain = explainer.explain(stats)
         findings.extend(run_rules(stats, explain, catalog.for_ns(stats.shape.ns)))
+    analysis.explains = explainer.executed
+    indexes = inventory(conn, unused_days)
+    for coll in indexes.collections:
+        findings.extend(run_index_rules(coll))
+    analysis.members_total = indexes.report.members_total
+    analysis.members_reached = indexes.report.members_reached
+    analysis.unreachable = indexes.report.unreachable
     weight = {s.shape.fingerprint: s.total_ms for s in analysis.shapes}
     analysis.findings = sort_findings(findings, weight)
-    analysis.explains = explainer.executed
     return analysis
 
 

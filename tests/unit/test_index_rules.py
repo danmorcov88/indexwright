@@ -11,7 +11,7 @@ OLD = datetime.now(UTC) - timedelta(days=90)
 FRESH = datetime.now(UTC) - timedelta(days=2)
 
 
-def _index(name: str, *keys: tuple[str, Any], **flags: bool) -> IndexInfo:
+def _index(name: str, *keys: tuple[str, Any], **flags: Any) -> IndexInfo:
     return IndexInfo(NS, name, keys, **flags)
 
 
@@ -68,9 +68,14 @@ def test_duplicate_keeps_unique_then_most_used() -> None:
     assert all(f.severity == "medium" and f.shape_id == "" for f in findings)
 
 
-def test_duplicate_ignores_partial_versus_full() -> None:
-    coll = _coll(ID, _index("a_1", ("a", 1)), _index("a_part", ("a", 1), partial=True))
-    assert _rules(coll) == []
+def test_duplicate_ignores_different_partial_filters_and_collations() -> None:
+    full = _index("a_1", ("a", 1))
+    part = _index("a_part", ("a", 1), partial=True, partial_filter='{"x": 1}')
+    other_part = _index("a_part2", ("a", 1), partial=True, partial_filter='{"x": 2}')
+    assert _rules(_coll(ID, full, part, other_part)) == []
+    same_part = _index("a_part3", ("a", 1), partial=True, partial_filter='{"x": 2}')
+    assert _rules(_coll(ID, other_part, same_part)) == [("duplicate_index", "a_part3")]
+    assert _rules(_coll(ID, full, _index("a_ro", ("a", 1), collation='"ro"'))) == []
 
 
 def test_redundant_prefix() -> None:

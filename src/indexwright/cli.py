@@ -16,7 +16,9 @@ from indexwright import __version__
 from indexwright.aggregate import group
 from indexwright.analysis import analyze as run_analysis
 from indexwright.doctor import run_checks
+from indexwright.indexes import inventory
 from indexwright.mongo import ConnectError, Settings, WriteAccessError, connect, mask_uri
+from indexwright.rules.esr import format_keys
 from indexwright.shape import compact
 from indexwright.source import read_all
 
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
 
     from indexwright.doctor import Check
-    from indexwright.model import Entry, Finding, Shape, ShapeStats
+    from indexwright.model import CollectionIndexes, Entry, Finding, Shape, ShapeStats
     from indexwright.mongo import Connection
 
 EXIT_OK = 0
@@ -80,6 +82,9 @@ Since = Annotated[
 ]
 Limit = Annotated[int, typer.Option("--limit", help="Max profile entries to read per database")]
 MaxExplains = Annotated[int, typer.Option("--max-explains", help="Max explain calls per run")]
+UnusedDays = Annotated[
+    int, typer.Option("--unused-days", help="Report indexes with no use for this many days")
+]
 
 
 @app.command()
@@ -142,13 +147,14 @@ def analyze(
     since: Since = "24h",
     limit: Limit = 50_000,
     max_explains: MaxExplains = 200,
+    unused_days: UnusedDays = 30,
 ) -> None:
     """Find slow query shapes and recommend indexes. Exit 1 when high findings exist."""
     settings = Settings(uri=uri, timeout=ctx.obj, db=db)
     cutoff = datetime.now(UTC) - _parse_since(since)
     started = time.monotonic()
     result = _with_connection(
-        settings, lambda conn: run_analysis(conn, cutoff, limit, max_explains)
+        settings, lambda conn: run_analysis(conn, cutoff, limit, max_explains, unused_days)
     )
     if result.failed_checks:
         stdout.print(_checks_table(result.checks))
@@ -166,12 +172,72 @@ def analyze(
         for rec, shape_ids in statements:
             served = ", ".join(sid[:10] for sid in shape_ids)
             stdout.print(f"  {rec.statement}   [dim]# shapes {served}[/dim]", soft_wrap=True)
+    drops = result.drop_index_statements()
+    if drops:
+        stdout.print()
+        stdout.print("[bold]Indexes to drop[/bold] (verify usage on every member first)")
+        for rec in drops:
+            stdout.print(f"  {rec.statement}", soft_wrap=True)
     stderr.print(
         f"analyze: {result.entries_read} entries read, {len(result.shapes)} shapes, "
         f"{result.explains} explains, {len(result.findings)} findings, "
+        f"{_members_note(result.members_reached, result.members_total, result.unreachable)}"
         f"{time.monotonic() - started:.1f}s"
     )
     raise typer.Exit(EXIT_FINDINGS if result.actionable else EXIT_OK)
+
+
+def _members_note(reached: int, total: int, unreachable: list[str]) -> str:
+    if total <= 1:
+        return ""
+    note = f"index usage from {reached}/{total} members"
+    if unreachable:
+        note += f" (unreachable: {', '.join(unreachable)})"
+    return note + ", "
+
+
+@app.command()
+def indexes(ctx: typer.Context, uri: Uri, db: Db = None, unused_days: UnusedDays = 30) -> None:
+    """Index inventory with usage from every replica set member. No rules."""
+    settings = Settings(uri=uri, timeout=ctx.obj, db=db)
+    started = time.monotonic()
+    result = _with_connection(settings, lambda conn: inventory(conn, unused_days))
+    stdout.print(_indexes_table(result.collections))
+    total = sum(len(c.indexes) for c in result.collections)
+    report = result.report
+    stderr.print(
+        f"indexes: {total} indexes in {len(result.collections)} collections, "
+        f"{_members_note(report.members_reached, report.members_total, report.unreachable)}"
+        f"{time.monotonic() - started:.1f}s"
+    )
+
+
+def _indexes_table(collections: list[CollectionIndexes]) -> Table:
+    table = Table(title="indexes", expand=True)
+    table.add_column("ns", no_wrap=True)
+    table.add_column("name", no_wrap=True)
+    table.add_column("keys", ratio=1, overflow="fold")
+    table.add_column("flags")
+    table.add_column("ops", justify="right")
+    table.add_column("since", no_wrap=True)
+    for coll in collections:
+        for index in coll.indexes:
+            usage = coll.usage.get(index.name) if coll.usage else None
+            flags = " ".join(
+                name
+                for name, on in (
+                    ("unique", index.unique),
+                    ("sparse", index.sparse),
+                    ("partial", index.partial),
+                    ("ttl", index.ttl),
+                    ("hidden", index.hidden),
+                )
+                if on
+            )
+            ops = str(usage.ops) if usage else "n/a"
+            since = usage.since.strftime("%Y-%m-%d") if usage else ""
+            table.add_row(coll.ns, index.name, format_keys(index.keys), flags, ops, since)
+    return table
 
 
 def _findings_table(findings: list[Finding], shapes: dict[str, Shape]) -> Table:
@@ -184,7 +250,7 @@ def _findings_table(findings: list[Finding], shapes: dict[str, Shape]) -> Table:
     for f in findings:
         style = SEVERITY_STYLE[f.severity]
         shape = shapes.get(f.shape_id)
-        label = f"{shape.op} {compact(shape)}" if shape else f.shape_id[:10]
+        label = f"{shape.op} {compact(shape)}" if shape else f"index {f.evidence.get('index', '')}"
         table.add_row(f"[{style}]{f.severity}[/{style}]", f.rule, f.ns, label, f.message)
     if not findings:
         table.add_row("", "", "", "", "no findings")

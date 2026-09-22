@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -7,8 +8,15 @@ from typing import TYPE_CHECKING, Any
 
 from pymongo.errors import OperationFailure
 
-from indexwright.model import IndexInfo, IndexUsage
-from indexwright.mongo import ConnectError, Settings, connect, retry
+from indexwright.model import CollectionIndexes, IndexInfo, IndexUsage
+from indexwright.mongo import (
+    ConnectError,
+    Settings,
+    connect,
+    retry,
+    user_collections,
+    user_databases,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -60,7 +68,13 @@ def index_info(ns: str, spec: dict[str, Any]) -> IndexInfo:
         partial="partialFilterExpression" in spec,
         hidden=bool(spec.get("hidden")),
         ttl="expireAfterSeconds" in spec,
+        partial_filter=_canonical(spec.get("partialFilterExpression")),
+        collation=_canonical(spec.get("collation", {}).get("locale")),
     )
+
+
+def _canonical(value: Any) -> str | None:
+    return None if value is None else json.dumps(value, sort_keys=True, default=str)
 
 
 @dataclass
@@ -190,3 +204,30 @@ def write_share(conn: Connection) -> dict[str, float] | None:
             )
             shares[ns] = writes / total
     return shares
+
+
+@dataclass
+class Inventory:
+    collections: list[CollectionIndexes]
+    report: UsageReport
+
+
+def inventory(conn: Connection, unused_days: int) -> Inventory:
+    databases = [conn.settings.db] if conn.settings.db else user_databases(conn)
+    namespaces = [f"{db}.{coll}" for db in databases for coll in user_collections(conn, db)]
+    report = collect_usage(conn, namespaces)
+    shares = write_share(conn)
+    catalog = IndexCatalog(conn)
+    collections = [
+        CollectionIndexes(
+            ns=ns,
+            indexes=catalog.for_ns(ns),
+            usage=report.usage.get(ns),
+            members_total=report.members_total,
+            members_reached=report.members_reached,
+            write_share=shares.get(ns) if shares is not None else None,
+            unused_days=unused_days,
+        )
+        for ns in namespaces
+    ]
+    return Inventory(collections, report)

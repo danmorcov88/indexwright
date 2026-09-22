@@ -27,11 +27,15 @@ def test_index_info_maps_spec_fields() -> None:
         "unique": True,
         "partialFilterExpression": {"status": "new"},
         "hidden": True,
+        "collation": {"locale": "ro", "strength": 2},
     }
     info = index_info("app.orders", spec)
     assert info.keys == (("status", 1), ("created", -1), ("loc", "2dsphere"))
     assert info.name == "status_1_created_-1_loc_2dsphere"
-    assert info.unique and info.partial and info.hidden and not info.sparse
+    assert info.unique and info.partial and info.hidden and not info.sparse and not info.ttl
+    assert info.partial_filter == '{"status": "new"}' and info.collation == '"ro"'
+    plain = index_info("app.orders", {"key": {"a": 1}, "name": "a_1", "expireAfterSeconds": 60})
+    assert plain.ttl and plain.partial_filter is None and plain.collation is None
 
 
 class FakeConn:

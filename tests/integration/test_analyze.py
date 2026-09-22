@@ -31,14 +31,15 @@ def test_workload_findings_match_exactly(mongo: Mongo, workload: int) -> None:
 
     labels = {s.shape.fingerprint: (s.shape.op, compact(s.shape)) for s in result.shapes}
     found: dict[tuple[str, str], tuple[str, str]] = {}
-    for finding in result.findings:
+    shape_findings = [f for f in result.findings if f.shape_id]
+    for finding in shape_findings:
         label = labels[finding.shape_id]
         assert label not in found, f"{label} has more than one finding"
         assert finding.recommendation is not None, f"{label}: {finding.message}"
         found[label] = (finding.rule, format_keys(finding.recommendation.keys))
     assert found == EXPECTED_FINDINGS
 
-    for finding in result.findings:
+    for finding in shape_findings:
         assert finding.severity in ("medium", "high"), finding
         assert "example.com" not in str(finding.evidence)
 
@@ -54,5 +55,7 @@ def test_analyze_command(mongo: Mongo, workload: int) -> None:
     assert result.exit_code == (EXIT_FINDINGS if actionable else EXIT_OK), result.output
     assert "Recommended indexes" in result.output
     assert "db.orders.createIndex({email: 1}" in result.output
-    assert "analyze:" in result.output and f"{len(EXPECTED_FINDINGS)} findings" in result.output
+    assert "Indexes to drop" in result.output
+    assert 'db.orders.dropIndex("created_1")' in result.output
+    assert "analyze:" in result.output and "19 shapes, 19 explains" in result.output
     assert mongo.opcounters() == before

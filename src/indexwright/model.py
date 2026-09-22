@@ -96,6 +96,8 @@ class IndexInfo:
     partial: bool = False
     hidden: bool = False
     ttl: bool = False
+    partial_filter: str | None = None
+    collation: str | None = None
 
 
 @dataclass(frozen=True)

@@ -14,9 +14,10 @@ WRITE_HEAVY = 0.3
 
 
 def duplicate_index(coll: CollectionIndexes, dropped: set[str]) -> list[Finding]:
+    # Same keys with a different partial filter or collation serve different queries.
     groups: dict[tuple[Any, ...], list[IndexInfo]] = {}
     for index in coll.indexes:
-        groups.setdefault((index.keys, index.partial), []).append(index)
+        groups.setdefault((index.keys, index.partial_filter, index.collation), []).append(index)
     findings = []
     for group in groups.values():
         if len(group) < 2:

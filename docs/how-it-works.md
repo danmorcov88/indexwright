@@ -50,3 +50,12 @@ Entries are grouped by `(namespace, fingerprint)`. Latency percentiles use neare
 A `getMore` is attributed to the query that opened the cursor. It adds to documents examined and
 returned, and to total time, but it is not counted as another execution and does not enter the
 latency percentiles: the first batch's latency is the query's latency.
+
+## Index usage
+
+`$indexStats` counters live on each node and reset when it restarts. The tool asks `hello` for
+the replica set members and queries every one of them through a direct connection built from
+the same connection string (same credentials, `directConnection=true`). Operations are summed
+and the earliest `since` is kept. A member that cannot be reached is named in the output rather
+than silently skipped, and unused-index findings say how many members reported. Behind a
+`mongos`, `$indexStats` already returns one document per shard; those are summed the same way.
