@@ -12,7 +12,7 @@ requires-python = ">=3.11"
 authors = [{ name = "Dan Morcov", email = "danmorcov88@gmail.com" }]
 keywords = ["mongodb", "index", "performance", "advisor", "profiler"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: System Administrators",
   "License :: OSI Approved :: MIT License",

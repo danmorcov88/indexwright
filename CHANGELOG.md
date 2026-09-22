@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-22
+
+First usable release.
+
 ### Added
 - The ESR builder leaves unanchored `$regex` fields out; a `$sort` feeding `$group` gets rewrite advice instead of an index; recommended indexes that are a prefix of another one are folded together. All three came out of a measured before/after run.
 - `analyze --format json|md --out FILE`: a stable JSON report (schema version 1, see `docs/report-schema.md`) and a short Markdown report.
