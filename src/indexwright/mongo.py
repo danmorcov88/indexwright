@@ -271,3 +271,14 @@ def index_stats_available(conn: Connection, db: str) -> bool | None:
     except OperationFailure:
         return False
     return True
+
+
+def user_collections(conn: Connection, db: str) -> list[str]:
+    database = conn.client[db]
+    names = retry(
+        lambda: database.list_collection_names(
+            filter={"type": "collection", "name": {"$not": {"$regex": r"^system\."}}},
+            maxTimeMS=conn.max_time_ms,
+        )
+    )
+    return sorted(names)

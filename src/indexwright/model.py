@@ -95,6 +95,27 @@ class IndexInfo:
     sparse: bool = False
     partial: bool = False
     hidden: bool = False
+    ttl: bool = False
+
+
+@dataclass(frozen=True)
+class IndexUsage:
+    ns: str
+    name: str
+    ops: int
+    since: datetime
+    members_reported: int
+
+
+@dataclass(frozen=True)
+class CollectionIndexes:
+    ns: str
+    indexes: list[IndexInfo]
+    usage: dict[str, IndexUsage] | None
+    members_total: int
+    members_reached: int
+    write_share: float | None
+    unused_days: int
 
 
 @dataclass(frozen=True)
